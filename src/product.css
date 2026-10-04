@@ -639,3 +639,24 @@ bdi { unicode-bidi: isolate; }
 .trend-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
 .trend-legend i { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); }
 .trend-legend i.miss { background: transparent; border: 2px solid var(--coral); margin-inline-start: 8px; }
+
+/* Supervisor Row 1 — keep content inside 128px areas */
+.sup-summary > article { min-width: 0; overflow: hidden; }
+.sup-summary .card-head { min-width: 0; gap: 8px; }
+.sup-summary .card-head h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sup-summary .card-head-tools { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.sup-summary .card-head-tools .text-link { white-space: nowrap; }
+.zone-ready { min-width: 0; }
+.zone-ready .ring { flex: none; }
+.ring-legend { min-width: 0; gap: 6px; }
+.ring-legend li { white-space: nowrap; }
+.sla-risk > div > span { display: block; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.risk-legend { flex-wrap: wrap; gap: 4px 12px; }
+.sla-risk .text-link { align-self: flex-start; white-space: nowrap; }
+.load-row { width: 100%; grid-template-columns: 24px minmax(0, 1fr) minmax(48px, 1.2fr) auto; gap: 12px; }
+.load-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.load-count { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 1440px) {
+  .sup-summary .card-head-tools .text-link { display: none; }
+  .load-count small { display: none; }
+}

@@ -3405,7 +3405,6 @@ function SupervisorSummary({
           <div>
             <strong><bdi>{sh04Open ? "00:42" : "02:10"}</bdi></strong>
             <span>{sh04Open ? "Response due · SH-04 · T-1042" : "Completion due · WC-02 · T-1036"}</span>
-            <small className="sla-note">Nearest deadline across response and completion (mm:ss)</small>
           </div>
           <div className="risk-rail">
             <i className="within" style={{ flex: 4 }} />
