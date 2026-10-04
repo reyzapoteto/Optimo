@@ -660,3 +660,8 @@ bdi { unicode-bidi: isolate; }
   .sup-summary .card-head-tools .text-link { display: none; }
   .load-count small { display: none; }
 }
+
+/* Page titles — Cormorant Garamond */
+.page-heading h1 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; letter-spacing: -0.2px; font-size: 34px; line-height: 1.1; }
+.topbar:has(.user.avatar-only) .page-heading h1 { font-size: 30px; }
+[lang="ar"] .page-heading h1 { font-family: "Noto Sans Arabic", sans-serif; font-size: 28px; }
