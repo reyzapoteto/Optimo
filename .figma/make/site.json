@@ -1,0 +1,10 @@
+{
+  "description": "A premium operational dashboard for hospitality managers to monitor facility status, prioritize tasks, and ensure service excellence in real time.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
