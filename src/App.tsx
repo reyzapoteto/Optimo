@@ -1284,18 +1284,18 @@ function Header({
   ]
   return (
     <header className="topbar">
-      {page !== "Excellence Center" ? <div className="page-heading" /> : <div className="page-heading">
+      {page !== "Excellence Center" || role === "Supervisor" ? <div className="page-heading" /> : <div className="page-heading">
         <div className="live-label">
           <i /> LIVE OPERATIONS <span>· UPDATED NOW</span>
         </div>
         <h1>
           {page === "Excellence Center"
-            ? role === "Supervisor" ? "Hello, Supervisor" : "Hospitality Excellence Center"
+            ? "Hospitality Excellence Center"
             : page}
         </h1>
         <p>
           {page === "Excellence Center"
-            ? role === "Supervisor" ? "Live facility operations across your zones." : "Live operations for the Washroom / Changing Area."
+            ? "Live operations for the Washroom / Changing Area."
             : pageDescriptions[page]}
         </p>
       </div>}
@@ -1323,17 +1323,6 @@ function Header({
             <bdi>{now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</bdi>
           </button>
         )}
-        {role === "Supervisor" && (
-          <div className="shift-clock" title="Shift progress · 4h 40m elapsed">
-            <span>
-              <small>SHIFT</small>
-              <bdi>07:00–15:00</bdi> · <b><bdi>3h 20m</bdi> left</b>
-            </span>
-            <i>
-              <em style={{ width: "58%" }} />
-            </i>
-          </div>
-        )}
         {role === "Supervisor" && page !== "Role Matrix" && page !== "Settings" && (
           <div className="scope-selector" role="group" aria-label="Zone scope">
             {[["My zones", "My zones"], ["Whole club", "Whole club"]].map(([value, label]) => (
@@ -1349,7 +1338,7 @@ function Header({
             ))}
           </div>
         )}
-        <LanguageSwitch language={language} onChange={setLanguage} />
+        {role !== "Supervisor" && <LanguageSwitch language={language} onChange={setLanguage} />}
         <button
           className="icon-button"
           aria-label="Notifications"
@@ -1455,6 +1444,23 @@ function Header({
                 </small>
               </div>
             </div>
+            {role === "Supervisor" && (
+              <div className="menu-extras">
+                <div className="shift-clock" title="Shift progress · 4h 40m elapsed">
+            <span>
+              <small>SHIFT</small>
+              <bdi>07:00–15:00</bdi> · <b><bdi>3h 20m</bdi> left</b>
+            </span>
+            <i>
+              <em style={{ width: "58%" }} />
+            </i>
+          </div>
+                <div className="menu-language">
+                  <small>LANGUAGE</small>
+                  <LanguageSwitch language={language} onChange={setLanguage} />
+                </div>
+              </div>
+            )}
             <button
               onClick={() => {
                 setProfile(true)
@@ -3332,6 +3338,28 @@ function DashboardSkeleton() {
   )
 }
 
+function ShiftKpis({ scope, ownership, navigate }: { scope: string; ownership: Ownership; navigate: (page: Page) => void }) {
+  const mine = scope === "My zones"
+  const unassigned = Object.values(ownership).filter((item) => item.taskStatus === "Unassigned").length + 1
+  const tiles: { label: string; value: string; detail: string; page: Page; tone?: "attention" | "critical" }[] = [
+    { label: "Unassigned tasks", value: String(unassigned), detail: unassigned > 1 ? "T-1042 · T-1045 · next due 00:42" : "T-1045 · response due 03:10", page: "Tasks", tone: unassigned ? "attention" : undefined },
+    { label: "Breaching soon", value: "2", detail: "Approaching SLA · 0 breached", page: "Tasks", tone: "attention" },
+    { label: "Team on shift", value: "4 / 4", detail: "1 blocked · avg load 1 / 3", page: "Team" },
+    { label: "Open issues", value: mine ? "3" : "4", detail: "1 high · 1 facility out of service", page: "Issues", tone: "critical" },
+  ]
+  return (
+    <section className="shift-kpis" aria-label="Shift at a glance">
+      {tiles.map((tile) => (
+        <button key={tile.label} className={`shift-kpi ${tile.tone ?? ""}`} onClick={() => navigate(tile.page)}>
+          <span>{tile.label}</span>
+          <strong><bdi>{tile.value}</bdi></strong>
+          <small>{tile.detail}</small>
+        </button>
+      ))}
+    </section>
+  )
+}
+
 function SupervisorSummary({
   items,
   ownership,
@@ -3686,18 +3714,7 @@ function ExcellenceCenter({
   }
   return (
     <div className={supervisor ? "dashboard sup-home" : "dashboard"}>
-      {supervisor ? (
-        <SupervisorSummary
-          scope={scope}
-          items={items}
-          ownership={ownership}
-          onFilter={() => setAttentionOnly(!attentionOnly)}
-          openDispatch={() => navigate("Tasks")}
-          openCrew={() => navigate("Team")}
-        />
-      ) : (
-        <SummaryRow onFilter={() => setAttentionOnly(!attentionOnly)} openTasks={() => navigate("Tasks")} />
-      )}
+      {supervisor && <ShiftKpis scope={scope} ownership={ownership} navigate={navigate} />}
       <section className="primary-grid">
         <OperationsMap
           selected={selected}
@@ -3716,10 +3733,24 @@ function ExcellenceCenter({
           onCalm={() => navigate("Quality")}
         />
       </section>
-      <section className="secondary-grid">
-        {supervisor ? <ShiftFlow /> : <PerformanceChart />}
-        <ActivityPanel onFocus={focusInTwin} />
-      </section>
+      {supervisor ? (
+        <SupervisorSummary
+          scope={scope}
+          items={items}
+          ownership={ownership}
+          onFilter={() => setAttentionOnly(!attentionOnly)}
+          openDispatch={() => navigate("Tasks")}
+          openCrew={() => navigate("Team")}
+        />
+      ) : (
+        <SummaryRow onFilter={() => setAttentionOnly(!attentionOnly)} openTasks={() => navigate("Tasks")} />
+      )}
+      {!supervisor && (
+        <section className="secondary-grid">
+          <PerformanceChart />
+          <ActivityPanel onFocus={focusInTwin} />
+        </section>
+      )}
       {assigning && (
         <AssignDialog
           facility={assigning}
@@ -5799,14 +5830,14 @@ export default function App() {
         {role === "Supervisor" && !booting && !forbidden && page !== "Excellence Center" && page !== "Role Matrix" && (
           <ShiftPulseBar ownership={ownership} navigate={setPage} />
         )}
-        {page !== "Excellence Center" && !booting && (
+        {(page !== "Excellence Center" || role === "Supervisor") && !booting && !forbidden && (
           <div className="page-intro page-heading">
             <div className="page-intro-copy">
               <div className="live-label">
                 <i /> LIVE OPERATIONS <span>· UPDATED NOW</span>
               </div>
-              <h1>{page}</h1>
-              <p>{pageDescriptions[page]}</p>
+              <h1>{page === "Excellence Center" ? "Hello, Supervisor" : page}</h1>
+              <p>{page === "Excellence Center" ? "Live facility operations across your zones." : pageDescriptions[page]}</p>
             </div>
             <div id="page-intro-actions" className="page-intro-actions" />
           </div>
