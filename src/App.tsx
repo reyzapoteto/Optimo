@@ -1,8 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import exterior from "./assets/optimo-exterior.png"
 import digitalTwin from "./assets/optimo-digital-twin-isolated.png"
 
-type Page = "Excellence Center" | "Tasks" | "Schedule" | "Team" | "Quality" | "Issues" | "Reports" | "Settings"
+type Page = "Excellence Center" | "Tasks" | "Schedule" | "Team" | "Quality" | "Issues" | "Reports" | "Settings" | "Role Matrix"
+type Role = "Duty Manager" | "Supervisor"
+type Ownership = Record<string, { assignee?: string; taskStatus?: string; closed?: boolean; restored?: boolean; reason?: string }>
+
+const accounts: Record<Role, { name: string; initials: string; staffId: string; email: string; shift: string; scope: string }> = {
+  "Duty Manager": { name: "Ahmed Hassan", initials: "AH", staffId: "DM-002", email: "ahmed@optimo.sa", shift: "06:00–18:00", scope: "Whole club" },
+  Supervisor: { name: "Khalid Al-Mutairi", initials: "KM", staffId: "SUP-014", email: "khalid@optimo.sa", shift: "07:00–15:00", scope: "Changing Rooms & Showers" },
+}
+const roleForStaffId = (id: string): Role | null =>
+  id === "DM-002" ? "Duty Manager" : id === "SUP-014" ? "Supervisor" : null
+const navForRole = (role: Role, items: Page[]) =>
+  role === "Supervisor" ? items.filter((item) => item !== "Settings") : items
+const initialOwnership: Ownership = {
+  "SH-04": { taskStatus: "Unassigned" },
+  "WC-02": { assignee: "Noura Al-Salem", taskStatus: "In Progress" },
+  "BIN-02": { assignee: "Yousef Mansour", taskStatus: "Accepted" },
+}
+const supervisorTeam = [
+  { name: "Noura Al-Salem", initials: "NS", active: 2, overdue: 0, zone: "Changing Rooms & Showers", shift: "On shift", fit: true },
+  { name: "Yousef Mansour", initials: "YM", active: 1, overdue: 0, zone: "Changing Rooms & Showers", shift: "On shift", fit: true },
+  { name: "Faisal Al-Qahtani", initials: "FQ", active: 1, overdue: 1, zone: "Changing Rooms & Showers", shift: "On shift", fit: true },
+  { name: "Sara Al-Dosari", initials: "SD", active: 0, overdue: 0, zone: "Functional Training", shift: "On break", fit: false },
+]
 type Tone = "ready" | "attention" | "critical" | "cleaning" | "muted"
 type Language = "en" | "ar"
 type OperationalContext = { club: string; level: string; zone: string }
@@ -599,6 +622,24 @@ const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
     arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
     plus: <path d="M12 5v14M5 12h14" />,
     filter: <path d="M4 5h16M7 12h10m-7 7h4" />,
+    alert: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5m0 3h.01" />
+      </>
+    ),
+    lock: (
+      <>
+        <rect x="5" y="11" width="14" height="10" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
   }
   return (
     <svg
@@ -626,7 +667,7 @@ function Button({
   disabled = false,
 }: {
   children: React.ReactNode
-  kind?: "primary" | "secondary" | "ghost"
+  kind?: "primary" | "secondary" | "ghost" | "destructive" | "danger"
   icon?: string
   onClick?: () => void
   disabled?: boolean
@@ -802,7 +843,7 @@ function Login({
 }: {
   language: Language
   setLanguage: (language: Language) => void
-  onSuccess: () => void
+  onSuccess: (role: Role) => void
 }) {
   const [mode, setMode] = useState<"signin" | "recovery" | "sent">("signin")
   const [email, setEmail] = useState("")
@@ -810,16 +851,13 @@ function Login({
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({})
+  const [attempts, setAttempts] = useState(0)
   const root = useArabicTranslation(language, mode)
   const submit = () => {
-    const nextErrors: { email?: string; password?: string } = {}
-    if (!email)
-      nextErrors.email =
-        language === "ar" ? "البريد الإلكتروني مطلوب" : "Email is required"
-    else if (!/^\S+@\S+\.\S+$/.test(email))
-      nextErrors.email =
-        language === "ar" ? "أدخل بريداً إلكترونياً صحيحاً" : "Enter a valid email"
+    const nextErrors: { email?: string; password?: string; form?: string } = {}
+    const staffId = email.trim().toUpperCase()
+    if (!staffId) nextErrors.email = language === "ar" ? "رقم الموظف مطلوب" : "Staff ID is required"
     if (mode === "signin" && !password)
       nextErrors.password =
         language === "ar" ? "كلمة المرور مطلوبة" : "Password is required"
@@ -832,8 +870,28 @@ function Login({
     setLoading(true)
     window.setTimeout(() => {
       setLoading(false)
-      onSuccess()
+      if (!navigator.onLine) {
+        setErrors({ form: "No connection. Check your network and retry." })
+        return
+      }
+      const role = roleForStaffId(staffId)
+      if (staffId === "SUP-099" || attempts >= 4) {
+        setErrors({ form: "Your account is locked. Contact an administrator." })
+        return
+      }
+      if (!role || password.length < 4) {
+        setAttempts((count) => count + 1)
+        setErrors({ form: "Staff ID or password is incorrect." })
+        return
+      }
+      onSuccess(role)
     }, 800)
+  }
+  const prefill = (role: Role) => {
+    setMode("signin")
+    setEmail(accounts[role].staffId)
+    setPassword("optimo-demo")
+    setErrors({})
   }
   return (
     <div
@@ -853,14 +911,20 @@ function Login({
               <span className="eyebrow">HOSPITALITY EXCELLENCE CENTER</span>
               <h1>Welcome back</h1>
               <p>Sign in to access club operations.</p>
+              {errors.form && (
+                <div className="form-alert" role="alert">
+                  <Icon name="alert" size={15} />
+                  <span>{errors.form}</span>
+                </div>
+              )}
               <div className="auth-fields">
                 <label className={errors.email ? "field error" : "field"}>
-                  <span>Email</span>
+                  <span>Staff ID</span>
                   <input
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="name@optimo.sa"
-                    inputMode="email"
+                    placeholder="e.g. SUP-014"
+                    autoComplete="username"
                   />
                   <small>{errors.email}</small>
                 </label>
@@ -913,8 +977,8 @@ function Login({
               <div className="security-note">
                 <i />
                 <span>
-                  <strong>Secure operational access</strong>Protected for
-                  authorized OPTIMO personnel.
+                  <strong>Secure operational access</strong>Your role is set by
+                  your account. No public registration.
                 </span>
               </div>
             </>
@@ -927,14 +991,15 @@ function Login({
               <span className="eyebrow">ACCOUNT RECOVERY</span>
               <h1>Recover access</h1>
               <p>
-                Enter your work email and we’ll send a secure recovery link.
+                Enter your Staff ID and we’ll send a secure recovery link to
+                your work email.
               </p>
               <label className={errors.email ? "field error" : "field"}>
-                <span>Email</span>
+                <span>Staff ID</span>
                 <input
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="name@optimo.sa"
+                  placeholder="e.g. SUP-014"
                 />
                 <small>{errors.email}</small>
               </label>
@@ -948,14 +1013,29 @@ function Login({
               <span className="success-mark">✓</span>
               <span className="eyebrow">RECOVERY SENT</span>
               <h1>Check your inbox</h1>
-              <p>A recovery link has been sent to your work email.</p>
-              <strong>{email}</strong>
+              <p>A recovery link has been sent to the work email for</p>
+              <strong><bdi>{email.toUpperCase()}</bdi></strong>
               <Button kind="secondary" onClick={() => setMode("signin")}>
                 Back to sign in
               </Button>
             </div>
           )}
         </div>
+        {mode === "signin" && (
+          <div className="demo-access" aria-label="Demo access — not part of production">
+            <span className="demo-tag">Demo</span>
+            <small>Prefill example account</small>
+            {(["Duty Manager", "Supervisor"] as Role[]).map((role) => (
+              <button
+                key={role}
+                className={email.toUpperCase() === accounts[role].staffId ? "active" : ""}
+                onClick={() => prefill(role)}
+              >
+                {role}
+              </button>
+            ))}
+          </div>
+        )}
         <footer>OPTIMO internal operations · Authorized access only</footer>
       </section>
       <section
@@ -974,9 +1054,11 @@ function Login({
 function Sidebar({
   active,
   setActive,
+  role,
 }: {
   active: Page
   setActive: (page: Page) => void
+  role: Role
 }) {
   return (
     <aside className="sidebar">
@@ -988,7 +1070,7 @@ function Sidebar({
         <Wordmark />
       </button>
       <nav>
-        {navItems.map((item) => (
+        {navForRole(role, navItems).map((item) => (
           <button
             key={item}
             className={`nav-item ${active === item ? "active" : ""}`}
@@ -999,15 +1081,147 @@ function Sidebar({
           </button>
         ))}
       </nav>
-      <div className="club-status">
+      {role !== "Supervisor" && <div className="club-status">
         <span className="eyebrow">MAIN CLUB</span>
         <strong>
           <i />
           42 devices online
         </strong>
         <span>Riyadh · All systems normal</span>
-      </div>
+      </div>}
+      {role === "Supervisor" && (
+        <div className="sidebar-user">
+          <span className="avatar">{accounts[role].initials}</span>
+          <div>
+            <strong>{accounts[role].name}</strong>
+            <small className="role-badge">{role}</small>
+          </div>
+        </div>
+      )}
     </aside>
+  )
+}
+
+type SupNotice = { id: string; facility: string; title: string; time: string; group: "Today" | "Earlier"; action?: string; tone: Tone; critical?: boolean }
+const supNotices: SupNotice[] = [
+  { id: "n1", facility: "SH-04", title: "Unassigned task · T-1042", time: "Response due in 00:42", group: "Today", action: "Assign now", tone: "attention" },
+  { id: "n2", facility: "WC-02", title: "SLA approaching · T-1036", time: "SLA breach in 02:10", group: "Today", action: "Open task", tone: "attention" },
+  { id: "n3", facility: "SH-06", title: "Leak alert · near SH-06", time: "Detected 10:16 · 8 min ago", group: "Today", action: "Open issue", tone: "critical", critical: true },
+  { id: "n4", facility: "INSP-210", title: "Inspection due · SH-01", time: "Due by 11:00", group: "Today", action: "Inspect", tone: "cleaning" },
+  { id: "n5", facility: "BIN-02", title: "Device restored · BIN-02 sensor", time: "Reconnected 09:40", group: "Earlier", tone: "ready" },
+  { id: "n6", facility: "SH-02", title: "Rework completed · T-1044", time: "Completed 09:12", group: "Earlier", tone: "ready" },
+]
+
+function NotificationCenter({ close, open }: { close: () => void; open: (id: string) => void }) {
+  const [tab, setTab] = useState<"All" | "Unread" | "Needs action">("All")
+  const [read, setRead] = useState<string[]>(["n5", "n6"])
+  const [sound, setSound] = useState(false)
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => event.key === "Escape" && close()
+    window.addEventListener("keydown", key)
+    return () => window.removeEventListener("keydown", key)
+  }, [close])
+  const visible = supNotices.filter((item) =>
+    tab === "Unread" ? !read.includes(item.id) : tab === "Needs action" ? Boolean(item.action) : true,
+  )
+  return (
+    <>
+      <div className="drawer-scrim" onClick={close} />
+      <aside className="notice-drawer" role="dialog" aria-label="Notification center">
+        <div className="notice-head">
+          <h2>Notifications</h2>
+          <button className="icon-button compact" onClick={close} aria-label="Close notifications">
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+        <div className="notice-tabs" role="tablist">
+          {(["All", "Unread", "Needs action"] as const).map((item) => (
+            <button key={item} role="tab" aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+              {item}
+              {item === "Unread" && <b>{supNotices.filter((n) => !read.includes(n.id)).length}</b>}
+            </button>
+          ))}
+        </div>
+        <div className="notice-list">
+          {visible.length === 0 && <p className="notice-empty">You're all caught up.</p>}
+          {(["Today", "Earlier"] as const).map((group) => {
+            const rows = visible.filter((item) => item.group === group)
+            if (!rows.length) return null
+            return (
+              <section key={group}>
+                <small className="eyebrow">{group}</small>
+                {rows.map((item) => {
+                  const unread = !read.includes(item.id)
+                  return (
+                    <div key={item.id} className={`notice-item ${unread ? "unread" : ""}`}>
+                      <i className={item.tone} />
+                      <button className="notice-body" onClick={() => setRead((r) => [...new Set([...r, item.id])])}>
+                        <b>{item.title}</b>
+                        <small><bdi>{item.facility}</bdi> · {item.time}</small>
+                        {unread && <em>Unread</em>}
+                      </button>
+                      {item.action && (
+                        <button className="secondary-button compact" onClick={() => { setRead((r) => [...new Set([...r, item.id])]); open(item.id === "n3" ? "ISS-SH06" : item.facility) }}>
+                          {item.action}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </section>
+            )
+          })}
+        </div>
+        <div className="notice-foot">
+          <button className="text-link" onClick={() => setRead(supNotices.map((item) => item.id))}>Mark all read</button>
+          <label className="sound-toggle">
+            <input type="checkbox" checked={sound} onChange={(event) => setSound(event.target.checked)} />
+            Sound {sound ? "on" : "off"} <span className="confirm-tag">To confirm</span>
+          </label>
+        </div>
+        <p className="notice-note">Reading a notification does not assign or accept anything.</p>
+      </aside>
+    </>
+  )
+}
+
+function SupervisorToasts({ openFacility }: { openFacility: (id: string) => void }) {
+  const [toasts, setToasts] = useState<SupNotice[]>([])
+  const [announce, setAnnounce] = useState("")
+  useEffect(() => {
+    const events: [number, SupNotice][] = [
+      [6000, { id: "t1", facility: "SH-05", title: "Shower requires cleaning", time: "Response due in 03:10", group: "Today", tone: "attention" }],
+      [14000, { id: "t2", facility: "SH-06", title: "Leak alert", time: "Detected now", group: "Today", tone: "critical", critical: true }],
+    ]
+    const timers = events.map(([delay, toast]) =>
+      window.setTimeout(() => {
+        setToasts((current) => [toast, ...current].slice(0, 3))
+        setAnnounce(`${toast.facility} ${toast.title}${toast.critical ? ", urgent" : ", unassigned"}.`)
+        if (!toast.critical) window.setTimeout(() => setToasts((current) => current.filter((t) => t.id !== toast.id)), 8000)
+      }, delay),
+    )
+    return () => timers.forEach((t) => window.clearTimeout(t))
+  }, [])
+  const dismiss = (id: string) => setToasts((current) => current.filter((t) => t.id !== id))
+  return (
+    <>
+      <div className="sr-only" aria-live="polite">{announce}</div>
+      <div className="toast-stack">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`sup-toast ${toast.critical ? "critical" : ""}`} role="status">
+            <Icon name="alert" size={16} />
+            <div>
+              <b>{toast.title}</b>
+              <small><bdi>{toast.facility}</bdi> · {toast.time}</small>
+            </div>
+            <button className="text-link" onClick={() => { openFacility(toast.facility === "SH-06" ? "SH-04" : toast.facility); dismiss(toast.id) }}>View</button>
+            <button className="icon-button compact" aria-label="Dismiss" onClick={() => dismiss(toast.id)}>
+              <Icon name="close" size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -1020,7 +1234,15 @@ function Header({
   context,
   openFacility,
   openTask,
+  role,
+  scope,
+  setScope,
+  switchRole,
 }: {
+  role: Role
+  scope: string
+  setScope: (scope: string) => void
+  switchRole: (role: Role) => void
   page: Page
   language: Language
   setLanguage: (language: Language) => void
@@ -1035,7 +1257,20 @@ function Header({
   const [profile, setProfile] = useState(false)
   const [readNotifications, setReadNotifications] = useState<string[]>([])
   const [showAllNotifications, setShowAllNotifications] = useState(false)
-  const notificationItems = [
+  const account = accounts[role]
+  const [now, setNow] = useState(() => new Date())
+  const [connection, setConnection] = useState<"Online" | "Delayed data" | "Offline">("Online")
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30000)
+    return () => window.clearInterval(id)
+  }, [])
+  const notificationItems = role === "Supervisor" ? [
+    ["SH-04", "Unassigned task · T-1042", "Response due in 00:42 (mm:ss)", "attention"],
+    ["WC-02", "SLA breach in 02:10 (mm:ss)", "Noura Al-Salem · In Progress", "critical"],
+    ["SH-03", "Blocker reported · Damaged fitting", "Facility out of service", "critical"],
+    ["INSP-210", "Inspection due", "Shower Area · within 15 min", "cleaning"],
+    ["CFG-SLA", "SLA threshold change requested", "Requires Settings access", "muted"],
+  ] : [
     ["SH-04", "Service Required", "Changing Area A · 2 min ago", "attention"],
     ["WC-02", "Cleaning task created", "Toilet Area · 4 min ago", "cleaning"],
     ["TSK-1046", "Task Reassigned", "Assigned to Sara Ali", "cleaning"],
@@ -1049,23 +1284,23 @@ function Header({
   ]
   return (
     <header className="topbar">
-      <div className="page-heading">
+      {page !== "Excellence Center" ? <div className="page-heading" /> : <div className="page-heading">
         <div className="live-label">
           <i /> LIVE OPERATIONS <span>· UPDATED NOW</span>
         </div>
         <h1>
           {page === "Excellence Center"
-            ? "Hospitality Excellence Center"
+            ? role === "Supervisor" ? "Hello, Supervisor" : "Hospitality Excellence Center"
             : page}
         </h1>
         <p>
           {page === "Excellence Center"
-            ? "Live operations for the Washroom / Changing Area."
+            ? role === "Supervisor" ? "Live facility operations across your zones." : "Live operations for the Washroom / Changing Area."
             : pageDescriptions[page]}
         </p>
-      </div>
+      </div>}
       <div className="header-tools">
-        <div className={`context-summary ${page === "Excellence Center" ? "" : "compact"}`}>
+        {role !== "Supervisor" && <div className={`context-summary ${page === "Excellence Center" ? "" : "compact"}`}>
           <span><small>CLUB</small>{context.club}</span>
           {page === "Excellence Center" && (
             <>
@@ -1075,7 +1310,45 @@ function Header({
               <span><small>LIVE TWIN</small>Washroom / Changing Area</span>
             </>
           )}
-        </div>
+        </div>}
+        {role === "Supervisor" && (
+          <button
+            className={`connection-status ${connection === "Online" ? "online" : connection === "Offline" ? "offline" : "delayed"}`}
+            title={connection === "Online" ? "42 devices online · 0 offline" : connection === "Offline" ? "Last updated 10:24 AM · data marked stale" : "Readings delayed · last sync 2 min ago"}
+            onClick={() => setConnection(connection === "Online" ? "Delayed data" : connection === "Delayed data" ? "Offline" : "Online")}
+            aria-label={`Connection: ${connection}. Select to preview other states (demo).`}
+          >
+            <Icon name={connection === "Offline" ? "close" : "Quality"} size={12} />
+            {connection}
+            <bdi>{now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</bdi>
+          </button>
+        )}
+        {role === "Supervisor" && (
+          <div className="shift-clock" title="Shift progress · 4h 40m elapsed">
+            <span>
+              <small>SHIFT</small>
+              <bdi>07:00–15:00</bdi> · <b><bdi>3h 20m</bdi> left</b>
+            </span>
+            <i>
+              <em style={{ width: "58%" }} />
+            </i>
+          </div>
+        )}
+        {role === "Supervisor" && page !== "Role Matrix" && page !== "Settings" && (
+          <div className="scope-selector" role="group" aria-label="Zone scope">
+            {[["My zones", "My zones"], ["Whole club", "Whole club"]].map(([value, label]) => (
+              <button
+                key={value}
+                className={scope === value ? "active" : ""}
+                aria-pressed={scope === value}
+                onClick={() => setScope(value)}
+                title={value === "My zones" ? account.scope : "Whole-club visibility · actions stay in your zones"}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <LanguageSwitch language={language} onChange={setLanguage} />
         <button
           className="icon-button"
@@ -1086,11 +1359,23 @@ function Header({
           }}
         >
           <Icon name="bell" />
-          {readNotifications.length < notificationItems.length && (
+          {role === "Supervisor" ? <b>4</b> : readNotifications.length < notificationItems.length && (
             <b>{notificationItems.length - readNotifications.length}</b>
           )}
         </button>
-        {notifications && (
+        {notifications && role === "Supervisor" && (
+          <NotificationCenter
+            close={() => setNotifications(false)}
+            open={(id) => {
+              setNotifications(false)
+              if (id.startsWith("INSP")) navigate("Quality")
+              else if (id.startsWith("ISS")) navigate("Issues")
+              else openFacility(id)
+            }}
+          />
+        )}
+        {role === "Supervisor" && <SupervisorToasts openFacility={openFacility} />}
+        {notifications && role !== "Supervisor" && (
           <div className="global-popover notifications">
             <div className="popover-head">
               <strong>Notifications</strong>
@@ -1114,7 +1399,8 @@ function Header({
                     setReadNotifications((items) => [
                       ...new Set([...items, id]),
                     ])
-                    if (id.startsWith("TSK")) openTask(id)
+                    if (id.startsWith("CFG")) navigate("Settings")
+                    else if (id.startsWith("TSK")) openTask(id)
                     else if (id.startsWith("INSP")) navigate("Quality")
                     else openFacility(id)
                     setNotifications(false)
@@ -1140,26 +1426,33 @@ function Header({
           </div>
         )}
         <button
-          className="user"
+          className={role === "Supervisor" ? "user avatar-only" : "user"}
+          aria-label={`${account.name} · ${role} · account menu`}
           onClick={() => {
             setUserMenu(!userMenu)
             setNotifications(false)
           }}
         >
-          <span>AH</span>
-          <div>
-            <strong>Ahmed Hassan</strong>
-            <small>Duty Manager</small>
-          </div>
-          <Icon name="down" size={13} />
+          <span>{account.initials}</span>
+          {role !== "Supervisor" && (
+            <>
+              <div>
+                <strong>{account.name}</strong>
+                <small className="role-badge">{role}</small>
+              </div>
+              <Icon name="down" size={13} />
+            </>
+          )}
         </button>
         {userMenu && (
           <div className="global-popover user-menu">
             <div className="account-summary">
-              <span>AH</span>
+              <span>{account.initials}</span>
               <div>
-                <strong>Ahmed Hassan</strong>
-                <small>ahmed@optimo.sa</small>
+                <strong>{account.name}</strong>
+                <small>
+                  <bdi>{account.staffId}</bdi> · {role} · Shift <bdi>{account.shift}</bdi>
+                </small>
               </div>
             </div>
             <button
@@ -1183,6 +1476,29 @@ function Header({
             >
               Language <span>{language === "en" ? "العربية" : "EN"}</span>
             </button>
+            <button
+              onClick={() => {
+                navigate("Role Matrix")
+                setUserMenu(false)
+              }}
+            >
+              Role &amp; permissions
+            </button>
+            <div className="demo-switch">
+              <span className="demo-tag">Demo</span>
+              {(["Duty Manager", "Supervisor"] as Role[]).map((item) => (
+                <button
+                  key={item}
+                  className={item === role ? "active" : ""}
+                  onClick={() => {
+                    switchRole(item)
+                    setUserMenu(false)
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
             <i />
             <button className="logout" onClick={logout}>
               Sign Out
@@ -1192,6 +1508,7 @@ function Header({
       </div>
       {profile && (
         <ProfilePanel
+          role={role}
           language={language}
           setLanguage={setLanguage}
           onClose={() => setProfile(false)}
@@ -1205,14 +1522,17 @@ function ProfilePanel({
   language,
   setLanguage,
   onClose,
+  role,
 }: {
   language: Language
   setLanguage: (language: Language) => void
   onClose: () => void
+  role: Role
 }) {
+  const account = accounts[role]
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [name, setName] = useState("Ahmed Hassan")
+  const [name, setName] = useState(account.name)
   const [alerts, setAlerts] = useState(true)
   const [shiftUpdates, setShiftUpdates] = useState(true)
   const save = () => {
@@ -1236,10 +1556,10 @@ function ProfilePanel({
           </button>
         </div>
         <div className="profile-identity">
-          <span>AH</span>
+          <span>{account.initials}</span>
           <div>
-            <strong>Ahmed Hassan</strong>
-            <small>Duty Manager · Main Club</small>
+            <strong>{account.name}</strong>
+            <small>{role} · Main Club · {account.scope}</small>
           </div>
         </div>
         <div className="profile-fields">
@@ -1253,7 +1573,7 @@ function ProfilePanel({
           </label>
           <label className="field">
             <span>Email</span>
-            <input disabled value="ahmed@optimo.sa" />
+            <input disabled value={account.email} />
           </label>
           <label className="field">
             <span>Preferred Language</span>
@@ -1552,6 +1872,7 @@ const pageDescriptions: Record<Page, string> = {
   Issues: "Track facility faults and operational blockers to resolution.",
   Reports: "Review service performance and recurring operational patterns.",
   Settings: "Configure locations, devices, service rules and access.",
+  "Role Matrix": "What each role can see and do. Source of truth for every screen.",
 }
 
 function Donut({
@@ -1615,9 +1936,11 @@ function Donut({
 function SummaryRow({
   onFilter,
   openTasks,
+  supervisor,
 }: {
   onFilter: () => void
   openTasks: () => void
+  supervisor?: { unassigned: number; inProgress: number; blocked: number; onAssign: () => void }
 }) {
   return (
     <section className="summary-grid">
@@ -1667,33 +1990,72 @@ function SummaryRow({
             <h2>Active Workload</h2>
           </div>
           <button className="text-link" onClick={openTasks}>
-            Open task board <Icon name="arrow" size={14} />
+            {supervisor ? "Open dispatch board" : "Open task board"} <Icon name="arrow" size={14} />
           </button>
         </div>
+        {supervisor ? (
+          <>
+            <div className="workload-total">
+              <strong>{supervisor.unassigned + supervisor.inProgress + supervisor.blocked}</strong>
+              <span>ACTIVE</span>
+              <small>My zones · Changing Rooms &amp; Showers</small>
+            </div>
+            <div
+              className="workload-rail supervisor"
+              style={{ gridTemplateColumns: `${supervisor.unassigned}fr ${supervisor.inProgress}fr ${supervisor.blocked}fr` }}
+            >
+              {supervisor.unassigned > 0 && <i className="unassigned" />}
+              <i className="progress" />
+              <i className="blocked" />
+            </div>
+            <div className="workload-legend">
+              <span className={supervisor.unassigned ? "foreground" : ""}>
+                <i className="unassigned" />
+                <b>{supervisor.unassigned}</b> Unassigned
+              </span>
+              <span>
+                <i className="progress" />
+                <b>{supervisor.inProgress}</b> In Progress
+              </span>
+              <span>
+                <i className="blocked" />
+                <b>{supervisor.blocked}</b> Blocked
+              </span>
+              {supervisor.unassigned > 0 && (
+                <Button kind="secondary" onClick={supervisor.onAssign}>
+                  Assign
+                </Button>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
         <div className="workload-total">
-          <strong>3</strong>
-          <span>ACTIVE</span>
-          <small>Washroom / Changing Area</small>
-        </div>
-        <div className="workload-rail washroom">
-          <i />
-          <i className="accepted" />
-          <i className="progress" />
-        </div>
-        <div className="workload-legend">
-          <span>
-            <i className="new" />
-            <b>1</b> New
-          </span>
-          <span>
-            <i className="accepted" />
-            <b>1</b> Accepted
-          </span>
-          <span>
-            <i className="progress" />
-            <b>1</b> In Progress
-          </span>
-        </div>
+              <strong>3</strong>
+              <span>ACTIVE</span>
+              <small>Washroom / Changing Area</small>
+            </div>
+            <div className="workload-rail washroom">
+              <i />
+              <i className="accepted" />
+              <i className="progress" />
+            </div>
+            <div className="workload-legend">
+              <span>
+                <i className="new" />
+                <b>1</b> New
+              </span>
+              <span>
+                <i className="accepted" />
+                <b>1</b> Accepted
+              </span>
+              <span>
+                <i className="progress" />
+                <b>1</b> In Progress
+              </span>
+            </div>
+          </>
+        )}
       </article>
     </section>
   )
@@ -1706,6 +2068,8 @@ function OperationsMap({
   setAttentionOnly,
   openTask,
   context,
+  items = facilities,
+  inspectorActions,
 }: {
   selected: Facility | null
   setSelected: (facility: Facility | null) => void
@@ -1713,6 +2077,8 @@ function OperationsMap({
   setAttentionOnly: (value: boolean) => void
   openTask: () => void
   context: OperationalContext
+  items?: Facility[]
+  inspectorActions?: (facility: Facility, showHistory: () => void) => React.ReactNode
 }) {
   type TwinMode = "Service Status" | "Occupancy" | "Bin Levels" | "Devices"
   const [mode, setMode] = useState<TwinMode>("Service Status")
@@ -1748,10 +2114,10 @@ function OperationsMap({
       orbitY: 1,
     })
   }
-  const locateResults = facilities.filter((facility) =>
+  const locateResults = items.filter((facility) =>
     facility.id.toLowerCase().includes(locate.toLowerCase()),
   )
-  const visible = facilities
+  const visible = items
   useEffect(() => {
     if (!selected) return
     setCamera({
@@ -1795,7 +2161,9 @@ function OperationsMap({
       <div className="operations-head">
         <div>
           <span className="eyebrow">LIVE SPATIAL OPERATIONS</span>
-          <h2>OPTIMO Live Digital Twin</h2>
+          <h2>
+            OPTIMO Live Digital Twin <span className="demo-label">Illustrative demo layout</span>
+          </h2>
           <p>
             Drag to orbit · Shift-drag to pan · Select a facility to
             investigate.
@@ -1949,7 +2317,7 @@ function OperationsMap({
                 draggable={false}
               />
               <div className="twin-grounding" />
-              {facilities.map((facility) => {
+              {items.map((facility) => {
                 const tone = markerTone(facility)
                 const modeMuted =
                   (mode === "Bin Levels" &&
@@ -2062,9 +2430,13 @@ function OperationsMap({
         </div>
         {selected && (
           <Inspector
-            facility={selected}
+            facility={items.find((item) => item.id === selected.id) ?? selected}
             close={() => setSelected(null)}
             openTask={openTask}
+            actions={
+              inspectorActions &&
+              ((showHistory) => inspectorActions(items.find((item) => item.id === selected.id) ?? selected, showHistory))
+            }
           />
         )}
       </div>
@@ -2076,10 +2448,12 @@ function Inspector({
   facility,
   close,
   openTask,
+  actions,
 }: {
   facility: Facility
   close: () => void
   openTask: () => void
+  actions?: (showHistory: () => void) => React.ReactNode
 }) {
   const [detail, setDetail] = useState<"facility" | "device" | "history">(
     "facility",
@@ -2170,15 +2544,24 @@ function Inspector({
                 </div>
                 <div>
                   <dt>Response</dt>
-                  <dd>Accepted in 00:32</dd>
+                  <dd className={facility.taskStatus === "Unassigned" ? "accent" : ""}>
+                    {facility.taskStatus === "Unassigned"
+                      ? "Response due in 00:42"
+                      : "Accepted in 00:32"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Completion</dt>
-                  <dd className="accent">Due in 06:30</dd>
+                  <dd className="accent">
+                    {facility.id === "WC-02" ? "SLA breach in 02:10" : "Completion due in 06:30"}
+                  </dd>
                 </div>
               </>
             )}
           </dl>
+          {actions ? (
+            <div className="inspector-actions">{actions(() => setDetail("history"))}</div>
+          ) : (
           <div className="inspector-actions">
             {facility.status !== "Ready" && (
               <Button kind="primary" onClick={openTask}>
@@ -2192,6 +2575,7 @@ function Inspector({
               View Device
             </Button>
           </div>
+          )}
         </>
       )}
       {detail === "device" && (
@@ -2277,12 +2661,77 @@ function Inspector({
   )
 }
 
+type QueueItem = {
+  id: string
+  type: string
+  zone: string
+  status: string
+  owner?: string
+  time: string
+  tone: Tone
+  action?: { label: string; run: () => void }
+  viewOnly?: boolean
+  onOpen: () => void
+}
+
+function SupervisorQueue({ items, onCalm }: { items: QueueItem[]; onCalm: () => void }) {
+  return (
+    <div className="exception-list supervisor-queue">
+      {items.map((item, index) => (
+        <div className="exception-item" key={item.id + item.status}>
+          <button onClick={item.onOpen}>
+            <span className={`priority-bar ${item.tone}`} />
+            <span className="exception-rank">0{index + 1}</span>
+            <span className="exception-main">
+              <strong>
+                <bdi>{item.id}</bdi> · {item.type}
+              </strong>
+              <small>{item.zone}</small>
+              <span>
+                {item.status}
+                {item.owner && (
+                  <em className={item.owner === "UNASSIGNED" ? "owner unassigned" : "owner"}>
+                    {item.owner === "UNASSIGNED" ? "UNASSIGNED" : `Assigned to ${item.owner}`}
+                  </em>
+                )}
+              </span>
+              <small className={item.tone}>{item.time}</small>
+            </span>
+            <span className="exception-time">
+              {item.viewOnly && <span className="view-only"><Icon name="eye" size={12} /> View only</span>}
+              <Icon name="chevron" size={16} />
+            </span>
+          </button>
+          {item.action && !item.viewOnly && (
+            <Button kind="secondary" onClick={item.action.run}>
+              {item.action.label}
+            </Button>
+          )}
+        </div>
+      ))}
+      {items.length === 0 && (
+        <div className="compact-empty">
+          <strong>All clear</strong>
+          <span>All monitored facilities are operating normally.</span>
+          <button className="text-link" onClick={onCalm}>
+            View upcoming inspections <Icon name="arrow" size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AttentionQueue({
   onSelect,
   onViewAll,
+  supervisorItems,
+  onCalm,
 }: {
   onSelect: (facility: Facility) => void
   onViewAll: () => void
+  supervisorItems?: QueueItem[]
+  onCalm?: () => void
 }) {
   const items = [
     {
@@ -2316,13 +2765,18 @@ function AttentionQueue({
       <div className="section-head">
         <div>
           <span className="eyebrow">DECISION QUEUE</span>
-          <h2>Needs Attention</h2>
+          <h2>{supervisorItems ? "Needs Your Decision" : "Needs Attention"}</h2>
         </div>
-        <span className="count">{visibleItems.length}</span>
+        <span className="count">{supervisorItems?.length ?? visibleItems.length}</span>
       </div>
       <p className="section-intro">
-        Prioritized by urgency and service impact.
+        {supervisorItems
+          ? "Prioritized by urgency. Each item shows its owner and next step."
+          : "Prioritized by urgency and service impact."}
       </p>
+      {supervisorItems ? (
+        <SupervisorQueue items={supervisorItems} onCalm={onCalm ?? onViewAll} />
+      ) : (
       <div className="exception-list">
         {visibleItems.map((item, index) => (
           <button
@@ -2353,8 +2807,9 @@ function AttentionQueue({
           </div>
         )}
       </div>
+      )}
       <button className="text-link full" onClick={onViewAll}>
-        View all exceptions <Icon name="arrow" size={14} />
+        {supervisorItems ? "View all in Dispatch Board" : "View all exceptions"} <Icon name="arrow" size={14} />
       </button>
     </article>
   )
@@ -2503,19 +2958,606 @@ function ActivityPanel({
   )
 }
 
+const resolveFacility = (facility: Facility, ownership: Ownership): Facility => {
+  const own = ownership[facility.id]
+  let next: Facility = own
+    ? { ...facility, assigned: own.assignee, taskStatus: own.taskStatus ?? facility.taskStatus }
+    : facility
+  if (own?.closed)
+    next = { ...next, status: "Out of Service", tone: "critical", detail: own.reason, priority: true }
+  else if (own?.restored)
+    next = { ...next, status: "Service Required", tone: "attention", detail: "Restored · awaiting inspection", priority: true }
+  if (next.deviceStatus === "Offline" && next.status === "Ready")
+    next = { ...next, status: "Unverified · Device offline", tone: "muted", detail: "Stale reading" }
+  return next
+}
+
+function AssignDialog({
+  facility,
+  current,
+  onClose,
+  onConfirm,
+}: {
+  facility: Facility
+  current?: string
+  onClose: () => void
+  onConfirm: (assignee: string, reason?: string) => void
+}) {
+  const ranked = [...supervisorTeam].sort(
+    (a, b) => Number(b.fit) - Number(a.fit) || a.overdue - b.overdue || a.active - b.active,
+  )
+  const suggested = ranked.find((member) => member.name !== current && member.shift === "On shift")?.name
+  const [choice, setChoice] = useState(suggested ?? "")
+  const [reason, setReason] = useState("")
+  const reassign = Boolean(current)
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="action-modal assign-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <span className="eyebrow">{reassign ? "REASSIGN TASK" : "ASSIGN TASK"}</span>
+        <h2>
+          <bdi>{facility.id}</bdi> · {facility.type}
+        </h2>
+        <p className="dialog-intro">
+          {facility.zone} · {facility.status}
+          {reassign ? ` · Currently ${current}` : " · Response due in 00:42 (mm:ss)"}
+        </p>
+        <div className="picker-list" role="radiogroup">
+          {ranked.map((member) => (
+            <button
+              key={member.name}
+              role="radio"
+              aria-checked={choice === member.name}
+              className={`picker-row ${choice === member.name ? "selected" : ""}`}
+              disabled={member.name === current}
+              onClick={() => setChoice(member.name)}
+            >
+              <span className="avatar">{member.initials}</span>
+              <span className="picker-main">
+                <strong>
+                  {member.name}
+                  {member.name === suggested && <em className="suggested">Suggested</em>}
+                  {member.name === current && <em>Current</em>}
+                </strong>
+                <small>
+                  {member.zone}
+                  {!member.fit && " · Outside zone"}
+                </small>
+              </span>
+              <span className="picker-load">
+                <b>{member.active}</b> active
+                <span className={member.overdue ? "critical" : ""}>
+                  <b>{member.overdue}</b> overdue
+                </span>
+              </span>
+              <Status tone={member.shift === "On shift" ? "ready" : "muted"}>{member.shift}</Status>
+            </button>
+          ))}
+        </div>
+        {reassign && (
+          <div className="reason-chips">
+            <span>Reason (optional)</span>
+            {["Workload", "Absence", "SLA risk", "Other"].map((item) => (
+              <button key={item} className={reason === item ? "active" : ""} onClick={() => setReason(reason === item ? "" : item)}>
+                {item}
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="rule-note">
+          <Icon name="lock" size={13} /> Completion deadline stays the same.
+        </p>
+        <div className="modal-actions">
+          <Button kind="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button kind="primary" disabled={!choice} onClick={() => onConfirm(choice, reason || undefined)}>
+            Confirm assignment
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FacilityControlDialog({
+  facility,
+  mode,
+  onClose,
+  onConfirm,
+}: {
+  facility: Facility
+  mode: "close" | "restore"
+  onClose: () => void
+  onConfirm: (reason?: string) => void
+}) {
+  const [reason, setReason] = useState("")
+  const [restoreAt, setRestoreAt] = useState("")
+  const [touched, setTouched] = useState(false)
+  const offline = facility.deviceStatus === "Offline"
+  const resulting = offline ? "Unverified · Device offline" : "Service Required · inspection before Ready"
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="action-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <span className="eyebrow">{mode === "close" ? "CLOSE FACILITY" : "RESTORE FACILITY"}</span>
+        <h2>
+          {mode === "close" ? "Take" : "Restore"} <bdi>{facility.id}</bdi> {mode === "close" ? "out of service?" : "to service?"}
+        </h2>
+        {mode === "close" ? (
+          <>
+            <p className="dialog-intro">
+              Members won't be directed to this facility. Open tasks linked to <bdi>{facility.id}</bdi> are paused by
+              supervisor, and their SLA timers show "Paused by supervisor".
+            </p>
+            <div className="form-grid single">
+              <label className={touched && !reason ? "field error" : "field"}>
+                <span>Reason (required)</span>
+                <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="e.g. Damaged fitting" />
+                <small>{touched && !reason ? "Add a reason to close the facility." : ""}</small>
+              </label>
+              <label className="field">
+                <span>Expected restoration (optional)</span>
+                <input value={restoreAt} onChange={(event) => setRestoreAt(event.target.value)} placeholder="e.g. Today · 14:00" />
+              </label>
+            </div>
+          </>
+        ) : (
+          <div className="restore-preview">
+            <span>Resulting status</span>
+            <Status tone={offline ? "muted" : "attention"}>{resulting}</Status>
+            <small>Facilities are never marked Ready until service is verified and the device is online.</small>
+          </div>
+        )}
+        <div className="modal-actions">
+          <Button kind="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          {mode === "close" ? (
+            <Button
+              kind="danger"
+              onClick={() => {
+                setTouched(true)
+                if (reason) onConfirm(restoreAt ? `${reason} · expected ${restoreAt}` : reason)
+              }}
+            >
+              Close facility
+            </Button>
+          ) : (
+            <Button kind="primary" onClick={() => onConfirm()}>
+              Restore
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OverflowMenu({ items }: { items: { label: string; run: () => void; destructive?: boolean }[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="overflow-wrap">
+      <button className="icon-button compact" aria-label="More actions" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name="more" size={16} />
+      </button>
+      {open && (
+        <div className="dropdown-menu overflow-menu">
+          {items.map((item) => (
+            <button
+              key={item.label}
+              className={item.destructive ? "destructive" : ""}
+              onClick={() => {
+                setOpen(false)
+                item.run()
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PermissionState({ page, role, goBack }: { page: Page; role: Role; goBack: () => void }) {
+  return (
+    <div className="dashboard">
+      <section className="permission-state">
+        <span className="permission-mark">
+          <Icon name="lock" size={22} />
+        </span>
+        <span className="eyebrow">ACCESS RESTRICTED</span>
+        <h2>{page} is managed by administrators</h2>
+        <p>
+          Your {role} account can't open {page}. SLA rules, thresholds, devices, users and SOPs are changed by a System
+          Administrator. Ask an administrator if a change is needed.
+        </p>
+        <div className="modal-actions">
+          <Button kind="primary" onClick={goBack}>
+            Back to Excellence Center
+          </Button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function RoleMatrixPage({ role }: { role: Role }) {
+  const confirm = <em className="to-confirm">To confirm</em>
+  const nav: [string, string, React.ReactNode][] = [
+    ["Excellence Center", "Full", "Full (actions in own zones)"],
+    ["Tasks", "Full", "Dispatch Board (own team / zones)"],
+    ["Schedule", "Full", <>Shift Planner (own zones) {confirm}</>],
+    ["Team", "Full", "Crew Board (own team)"],
+    ["Quality", "Full", "Inspection Mode"],
+    ["Issues", "Full", "Triage Inbox"],
+    ["Reports", "Full", <>Shift Summary, view only {confirm}</>],
+    ["Settings", "Per config", <span className="denied">Hidden (not available)</span>],
+  ]
+  const actions: [string, React.ReactNode][] = [
+    ["View facility detail", "Yes"],
+    ["Create manual task", <>Yes {confirm}</>],
+    ["Assign / Reassign", "Yes (own team)"],
+    ["Cancel task", "Yes, reason required"],
+    ["Redistribute work", "Yes"],
+    ["Run inspection, Pass / Fail", "Yes"],
+    ["Create rework (via Fail)", "Yes (automatic, linked)"],
+    ["Update issue status", "Yes"],
+    ["Close / Restore facility", "Yes (authorized)"],
+    ["Edit SLA, thresholds, devices, users, SOPs", <span className="denied">No (administrator only)</span>],
+    ["View live employee location", <span className="denied">Never (assigned zone only)</span>],
+    ["Act outside own zones", <>View only {confirm}</>],
+    ["Command bar (Ctrl / Cmd + K)", <>Search + quick actions {confirm}</>],
+  ]
+  const paradigm: [string, string, string][] = [
+    ["Job", "Oversee, analyze, configure", "Run the shift, act now"],
+    ["Mental model", "Management console", "Shift command workbench"],
+    ["Time", "Periods, trends, history", "Now → next 8 hours"],
+    ["Primary object", "Tables, forms, reports", "Boards, lanes, queues"],
+    ["Interaction", "Filter → open → edit", "See → drag / tap → resolve"],
+    ["Density", "High-density, analytical", "Spacious, action-first"],
+    ["Pages feel like", "Data & configuration", "Dispatch & decisions"],
+    ["Settings", "Yes (admin)", "None"],
+  ]
+  return (
+    <div className="dashboard role-matrix">
+      <section className="paradigm panel">
+        <div className="section-head">
+          <div>
+            <span className="eyebrow">ROLE PARADIGMS</span>
+            <h2>Same language, different workspace</h2>
+          </div>
+          <Status tone="ready">Signed in as {role}</Status>
+        </div>
+        <div className="paradigm-grid">
+          <span />
+          <strong>Duty Manager / Admin</strong>
+          <strong className="sup">Supervisor</strong>
+          {paradigm.map(([dimension, dm, sup]) => (
+            <div className="paradigm-row" key={dimension}>
+              <span>{dimension}</span>
+              <p>{dm}</p>
+              <p className="sup">{sup}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="matrix-grid">
+        <article className="panel">
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">NAVIGATION ACCESS</span>
+              <h2>Menu by role</h2>
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table className="matrix-table">
+              <thead>
+                <tr>
+                  <th>MENU</th>
+                  <th>DUTY MANAGER</th>
+                  <th>SUPERVISOR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nav.map(([menu, dm, sup]) => (
+                  <tr key={menu}>
+                    <td>{menu}</td>
+                    <td>{dm}</td>
+                    <td>{sup}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+        <article className="panel">
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">KEY ACTIONS</span>
+              <h2>Supervisor actions</h2>
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table className="matrix-table">
+              <thead>
+                <tr>
+                  <th>ACTION</th>
+                  <th>SUPERVISOR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actions.map(([action, sup]) => (
+                  <tr key={action}>
+                    <td>{action}</td>
+                    <td>{sup}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+      <section className="matrix-principles">
+        {[
+          ["Role comes from the account", "Nobody picks a role at login. The Staff ID decides it. Demo chips only prefill example credentials and are not part of production."],
+          ["Hidden, not disabled", "Navigation a role can't use isn't shown. Actions a role can't take aren't rendered."],
+          ["No dead ends", "Deep links into a restricted area show which role can act and offer a way back."],
+          ["View only outside own zones", "Whole-club visibility with actions limited to own zones, marked with a quiet label. To confirm."],
+          ["Supervisor principles", "Action over information · ownership visible · time is spatial · every drag has a button · tables are secondary · no configuration · one job at a time."],
+        ].map(([title, body]) => (
+          <article key={title}>
+            <strong>{title}</strong>
+            <p>{body}</p>
+          </article>
+        ))}
+      </section>
+    </div>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="dashboard skeleton" aria-busy="true" aria-label="Loading Excellence Center">
+      <section className="summary-grid">
+        <i />
+        <i />
+        <i />
+      </section>
+      <section className="primary-grid">
+        <i />
+        <i />
+      </section>
+    </div>
+  )
+}
+
+function SupervisorSummary({
+  items,
+  ownership,
+  onFilter,
+  openDispatch,
+  openCrew,
+  scope,
+}: {
+  items: Facility[]
+  ownership: Ownership
+  scope: string
+  onFilter: () => void
+  openDispatch: () => void
+  openCrew: () => void
+}) {
+  void items
+  const mine = scope === "My zones"
+  const monitored = mine ? 27 : 42
+  const critical = mine ? 1 : 2
+  const attention = mine ? 2 : 3
+  const ready = monitored - critical - attention
+  const percent = Math.round((ready / monitored) * 100)
+  const unassigned = Object.values(ownership).filter((item) => item.taskStatus === "Unassigned").length + 1
+  const load = supervisorTeam
+    .map((member) => {
+      const base = member.name === "Noura Al-Salem" || member.name === "Yousef Mansour" ? 0 : 1
+      const owned = Object.values(ownership).filter((item) => item.assignee === member.name && !item.closed).length
+      return { ...member, count: base + owned, blocked: member.name === "Sara Al-Dosari" }
+    })
+    .sort((a, b) => b.count - a.count)
+  const sh04Open = ownership["SH-04"]?.taskStatus === "Unassigned"
+  const circumference = 2 * Math.PI * 58
+  const seg = (share: number) => `${(share / monitored) * circumference} ${circumference}`
+  return (
+    <section className="summary-grid sup-summary">
+      <article className="summary readiness">
+        <div className="card-head">
+          <h2>Zone Readiness</h2>
+          <span className="scope-tag">{scope}</span>
+        </div>
+        <div className="zone-ready">
+          <button className="ring" onClick={onFilter} aria-label={`${percent} percent ready, select to filter attention`}>
+            <svg viewBox="0 0 128 128">
+              <circle className="track" cx="64" cy="64" r="58" />
+              <circle className="seg ready" cx="64" cy="64" r="58" strokeDasharray={seg(ready)} />
+              <circle className="seg attention" cx="64" cy="64" r="58" strokeDasharray={seg(attention)} strokeDashoffset={-(ready / monitored) * circumference} />
+              <circle className="seg critical" cx="64" cy="64" r="58" strokeDasharray={seg(critical)} strokeDashoffset={-((ready + attention) / monitored) * circumference} />
+            </svg>
+            <span>
+              <strong>{percent}%</strong>
+              <small>READY</small>
+            </span>
+            <em className="ring-tip">
+              <b>SERVICE REQUIRED</b>
+              {attention} facilities · {Math.round((attention / monitored) * 100)}%
+            </em>
+          </button>
+          <ul className="ring-legend">
+            <li><i className="muted" /><b>{monitored}</b> monitored</li>
+            <li><i className="ready" /><b>{ready}</b> ready ({percent}%)</li>
+            <li><i className="attention" /><b>{attention}</b> need attention</li>
+            <li><i className="critical" /><b>{critical}</b> critical</li>
+          </ul>
+        </div>
+      </article>
+      <article className="summary performance">
+        <div className="card-head">
+          <h2>SLA Risk</h2>
+        </div>
+        <div className="sla-risk">
+          <div>
+            <strong><bdi>{sh04Open ? "00:42" : "02:10"}</bdi></strong>
+            <span>{sh04Open ? "Response due · SH-04 · T-1042" : "Completion due · WC-02 · T-1036"}</span>
+            <small className="sla-note">Nearest deadline across response and completion (mm:ss)</small>
+          </div>
+          <div className="risk-rail">
+            <i className="within" style={{ flex: 4 }} />
+            <i className="approaching" style={{ flex: 2 }} />
+          </div>
+          <div className="risk-legend">
+            <span><Icon name="Quality" size={12} /> <b>4</b> Within</span>
+            <span><Icon name="alert" size={12} /> <b>2</b> Approaching</span>
+            <span><Icon name="Issues" size={12} /> <b>0</b> Breached</span>
+          </div>
+          <button className="text-link" onClick={openDispatch}>
+            View at-risk tasks <Icon name="arrow" size={14} />
+          </button>
+        </div>
+      </article>
+      <article className="summary workload">
+        <div className="card-head">
+          <h2>Team Load</h2>
+          <div className="card-head-tools">
+            {unassigned > 0 && (
+              <button className="unassigned-chip" onClick={openDispatch}>
+                <Icon name="Tasks" size={13} /> <b>{unassigned}</b> Unassigned
+              </button>
+            )}
+            <button className="text-link" onClick={openDispatch}>
+              Open dispatch board <Icon name="arrow" size={14} />
+            </button>
+          </div>
+        </div>
+        <div className="load-rows">
+          {load.map((member) => (
+            <button key={member.name} className="load-row" onClick={openCrew}>
+              <span className="avatar">{member.initials}</span>
+              <span className="load-name">
+                {member.name}
+                {member.blocked && <small> · Blocked</small>}
+              </span>
+              <i className="load-bar">
+                <em className={member.count >= 3 ? "over" : ""} style={{ width: `${Math.min(member.count / 3, 1) * 100}%` }} />
+              </i>
+              <span className="load-count">
+                {member.count >= 3 && <Icon name="alert" size={12} />}
+                <bdi>{member.count} / 3</bdi>
+                {member.count >= 3 && <small>At capacity</small>}
+              </span>
+            </button>
+          ))}
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function ShiftFlow() {
+  const hours = [
+    { created: 3, completed: 3 },
+    { created: 3, completed: 3 },
+    { created: 5, completed: 4 },
+    { created: 2, completed: 1 },
+  ]
+  const [hover, setHover] = useState<number | null>(null)
+  let c = 0
+  let d = 0
+  const points = hours.map((hour, index) => {
+    c += hour.created
+    d += hour.completed
+    return { x: index === 3 ? 340 : (index + 1) * 100, c, d }
+  })
+  const pts = [{ x: 0, c: 0, d: 0 }, ...points]
+  const y = (value: number) => 176 - value * 10
+  const created = pts.map((point) => `${point.x},${y(point.c)}`).join(" ")
+  const completed = pts.map((point) => `${point.x},${y(point.d)}`).join(" ")
+  const area = `${created} ${[...pts].reverse().map((point) => `${point.x},${y(point.d)}`).join(" ")}`
+  const last = pts[pts.length - 1]
+  return (
+    <article className="chart-panel shift-flow">
+      <div className="card-head">
+        <h2>Shift Flow</h2>
+        <div className="card-head-tools">
+          <span className="flow-chip">Backlog <b>{last.c - last.d}</b></span>
+          <span className="flow-chip">Avg response <b><bdi>01:48</bdi></b> · target <bdi>02:00</bdi></span>
+        </div>
+      </div>
+      <div className="flow-chart">
+        <svg viewBox="0 0 800 200" preserveAspectRatio="none" onMouseLeave={() => setHover(null)}>
+          {[56, 96, 136, 176].map((line) => (
+            <line key={line} className="grid-line" x1="0" x2="800" y1={line} y2={line} />
+          ))}
+          <polygon className="flow-gap" points={area} />
+          <polyline className="flow-created" points={created} />
+          <polyline className="flow-completed" points={completed} />
+          <line className="flow-future" x1={last.x} x2="800" y1="176" y2="176" />
+          <line className="flow-now" x1={last.x} x2={last.x} y1="8" y2="186" />
+          {hours.map((_, index) => (
+            <rect
+              key={index}
+              x={index * 100}
+              y="0"
+              width="100"
+              height="200"
+              fill="transparent"
+              onMouseEnter={() => setHover(index)}
+            />
+          ))}
+        </svg>
+        <span className="flow-label created" style={{ top: `${(y(last.c) / 200) * 100}%`, left: `${(last.x / 800) * 100}%` }}>Created</span>
+        <span className="flow-label completed" style={{ top: `${(y(last.d) / 200) * 100}%`, left: `${(last.x / 800) * 100}%` }}>Completed</span>
+        <span className="flow-now-label" style={{ left: `${(last.x / 800) * 100}%` }}>Now · 10:24</span>
+        {hover !== null && (
+          <div className="flow-tip" style={{ left: `${((hover * 100 + 50) / 800) * 100}%` }}>
+            <b><bdi>{`${String(7 + hover).padStart(2, "0")}:00–${String(8 + hover).padStart(2, "0")}:00`}</bdi></b>
+            <span>Created {hours[hover].created} · Completed {hours[hover].completed}</span>
+            <span>Backlog +{hours[hover].created - hours[hover].completed}</span>
+          </div>
+        )}
+        <div className="flow-axis">
+          {["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00"].map((time) => (
+            <bdi key={time}>{time}</bdi>
+          ))}
+        </div>
+      </div>
+    </article>
+  )
+}
+
 function ExcellenceCenter({
   navigate,
   context,
   focusFacility,
   openTask,
+  role,
+  scope,
+  ownership,
+  setOwnership,
 }: {
   navigate: (page: Page) => void
   context: OperationalContext
   focusFacility: string | null
   openTask: (taskId: string) => void
+  role: Role
+  scope: string
+  ownership: Ownership
+  setOwnership: (update: (current: Ownership) => Ownership) => void
 }) {
   const [selected, setSelected] = useState<Facility | null>(null)
   const [attentionOnly, setAttentionOnly] = useState(false)
+  const [assigning, setAssigning] = useState<Facility | null>(null)
+  const [control, setControl] = useState<{ facility: Facility; mode: "close" | "restore" } | null>(null)
+  const [toast, setToast] = useState("")
+  const supervisor = role === "Supervisor"
+  const items = useMemo(() => facilities.map((facility) => resolveFacility(facility, ownership)), [ownership])
+  const find = (id: string) => items.find((item) => item.id === id)
   useEffect(() => {
     if (!focusFacility) return
     const facility = facilities.find((item) => item.id === focusFacility)
@@ -2535,38 +3577,188 @@ function ExcellenceCenter({
       setSelected(facility)
     }
   }
+  const taskFor = (id?: string) =>
+    id === "WC-02" ? "TSK-1047" : id === "BIN-02" ? "TSK-1046" : "TSK-1048"
+  const unassigned = items.filter((item) => item.taskStatus === "Unassigned")
+  const workload = {
+    unassigned: unassigned.length + 1,
+    blocked: 1,
+    inProgress: 6 - (unassigned.length + 1) - 1,
+    onAssign: () => unassigned[0] && setAssigning(unassigned[0]),
+  }
+  const queue: QueueItem[] = []
+  if (supervisor) {
+    const sh04 = find("SH-04")!
+    const wc02 = find("WC-02")!
+    const bin02 = find("BIN-02")!
+    items
+      .filter((item) => ownership[item.id]?.closed)
+      .forEach((item) =>
+        queue.push({
+          id: item.id, type: item.type, zone: item.zone, status: "Out of Service", time: item.detail ?? "Closed by supervisor",
+          tone: "critical", onOpen: () => selectException(item),
+          action: { label: "Restore", run: () => setControl({ facility: item, mode: "restore" }) },
+        }),
+      )
+    queue.push({
+      id: sh04.id, type: sh04.type, zone: "Changing Room A", status: sh04.status,
+      owner: sh04.assigned ?? "UNASSIGNED",
+      time: sh04.assigned ? "Completion due in 06:30" : "Response due in 00:42",
+      tone: "attention", onOpen: () => selectException(sh04),
+      action: sh04.assigned
+        ? { label: "Open Task", run: () => openTask(taskFor(sh04.id)) }
+        : { label: "Assign", run: () => setAssigning(sh04) },
+    })
+    queue.push({
+      id: wc02.id, type: wc02.type, zone: wc02.zone, status: "Cleaning Required", owner: wc02.assigned ?? "UNASSIGNED",
+      time: "SLA breach in 02:10", tone: "critical", onOpen: () => selectException(wc02),
+      action: { label: "Open Task", run: () => openTask(taskFor(wc02.id)) },
+    })
+    queue.push({
+      id: bin02.id, type: bin02.type, zone: bin02.zone, status: "85% full", owner: bin02.assigned ?? "UNASSIGNED",
+      time: "Approaching threshold", tone: "attention", onOpen: () => selectException(bin02),
+      action: { label: "Open Task", run: () => openTask(taskFor(bin02.id)) },
+    })
+    if (scope === "Whole club")
+      queue.push({
+        id: "WB-06", type: "Waste Bin", zone: "Lounge · outside your zones", status: "Blocked", owner: "Sara Omar",
+        time: "Breached by 04:20", tone: "critical", viewOnly: true, onOpen: () => navigate("Tasks"),
+      })
+    else
+      queue.push({
+        id: "SH-01", type: "Shower", zone: "Shower Area", status: "Inspection due · Completed 09:58", time: "Due by 11:00",
+        tone: "cleaning", onOpen: () => selectException(find("SH-01")!),
+        action: { label: "Inspect", run: () => navigate("Quality") },
+      })
+  }
+  const inspectorActions = (facility: Facility, showHistory: () => void) => {
+    const closed = ownership[facility.id]?.closed
+    let primary: React.ReactNode = null
+    let secondary: React.ReactNode = null
+    if (closed) {
+      primary = (
+        <Button kind="primary" onClick={() => setControl({ facility, mode: "restore" })}>
+          Restore facility
+        </Button>
+      )
+    } else if (ownership[facility.id]?.restored) {
+      primary = <Button kind="primary" onClick={() => navigate("Quality")}>Inspect</Button>
+    } else if (facility.taskStatus === "Unassigned") {
+      primary = (
+        <Button kind="primary" onClick={() => setAssigning(facility)}>
+          Assign
+        </Button>
+      )
+    } else if (facility.taskStatus === "Blocked") {
+      primary = <Button kind="primary" onClick={() => navigate("Issues")}>Follow up</Button>
+      secondary = <Button kind="secondary" onClick={() => setAssigning(facility)}>Reassign</Button>
+    } else if (facility.assigned) {
+      primary = (
+        <Button kind="primary" onClick={() => openTask(taskFor(facility.id))}>
+          Open Task <Icon name="arrow" size={15} />
+        </Button>
+      )
+      secondary = <Button kind="secondary" onClick={() => setAssigning(facility)}>Reassign</Button>
+    } else if (facility.lastEvent?.startsWith("Service completed")) {
+      primary = <Button kind="primary" onClick={() => navigate("Quality")}>Inspect</Button>
+    } else if (facility.deviceStatus === "Offline") {
+      primary = <Button kind="primary" onClick={() => navigate("Tasks")}>Create manual task</Button>
+    }
+    return (
+      <>
+        {primary}
+        {secondary ?? (
+          <Button kind="secondary" onClick={showHistory}>
+            View Service History
+          </Button>
+        )}
+        <div className="inspector-utility">
+          <span className="quiet-note">Facility controls</span>
+          <OverflowMenu
+            items={
+              closed
+                ? [{ label: "Restore facility", run: () => setControl({ facility, mode: "restore" }) }]
+                : [{ label: "Close facility", destructive: true, run: () => setControl({ facility, mode: "close" }) }]
+            }
+          />
+        </div>
+      </>
+    )
+  }
   return (
-    <div className="dashboard">
-      <SummaryRow
-        onFilter={() => setAttentionOnly(!attentionOnly)}
-        openTasks={() => navigate("Tasks")}
-      />
+    <div className={supervisor ? "dashboard sup-home" : "dashboard"}>
+      {supervisor ? (
+        <SupervisorSummary
+          scope={scope}
+          items={items}
+          ownership={ownership}
+          onFilter={() => setAttentionOnly(!attentionOnly)}
+          openDispatch={() => navigate("Tasks")}
+          openCrew={() => navigate("Team")}
+        />
+      ) : (
+        <SummaryRow onFilter={() => setAttentionOnly(!attentionOnly)} openTasks={() => navigate("Tasks")} />
+      )}
       <section className="primary-grid">
         <OperationsMap
           selected={selected}
           setSelected={setSelected}
           attentionOnly={attentionOnly}
           setAttentionOnly={setAttentionOnly}
-          openTask={() =>
-            openTask(
-              selected?.id === "WC-02"
-                ? "TSK-1047"
-                : selected?.id === "BIN-02"
-                  ? "TSK-1046"
-                  : "TSK-1048",
-            )
-          }
+          openTask={() => openTask(taskFor(selected?.id))}
           context={context}
+          items={items}
+          inspectorActions={supervisor ? inspectorActions : undefined}
         />
         <AttentionQueue
           onSelect={selectException}
           onViewAll={() => navigate("Tasks")}
+          supervisorItems={supervisor ? queue.slice(0, 4) : undefined}
+          onCalm={() => navigate("Quality")}
         />
       </section>
       <section className="secondary-grid">
-        <PerformanceChart />
+        {supervisor ? <ShiftFlow /> : <PerformanceChart />}
         <ActivityPanel onFocus={focusInTwin} />
       </section>
+      {assigning && (
+        <AssignDialog
+          facility={assigning}
+          current={assigning.assigned}
+          onClose={() => setAssigning(null)}
+          onConfirm={(assignee, reason) => {
+            const facilityId = assigning.id
+            setOwnership((current) => ({
+              ...current,
+              [facilityId]: { ...current[facilityId], assignee, taskStatus: "New" },
+            }))
+            setAssigning(null)
+            setToast(
+              `${facilityId} ${assigning.assigned ? "reassigned" : "assigned"} to ${assignee}${reason ? ` · ${reason}` : ""} · Response SLA running`,
+            )
+          }}
+        />
+      )}
+      {control && (
+        <FacilityControlDialog
+          facility={control.facility}
+          mode={control.mode}
+          onClose={() => setControl(null)}
+          onConfirm={(reason) => {
+            const facilityId = control.facility.id
+            setOwnership((current) => ({
+              ...current,
+              [facilityId]:
+                control.mode === "close"
+                  ? { ...current[facilityId], closed: true, reason }
+                  : { ...current[facilityId], closed: false, restored: true, reason: undefined },
+            }))
+            setToast(control.mode === "close" ? `${facilityId} is out of service` : `${facilityId} restored · awaiting inspection`)
+            setControl(null)
+          }}
+        />
+      )}
+      {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   )
 }
@@ -3974,6 +5166,96 @@ function IssuesPage() {
   )
 }
 
+const trendMetrics = {
+  "Response time": { unit: "mm:ss", target: 120, lowerIsBetter: true, base: 112, spread: 22 },
+  "SLA compliance": { unit: "%", target: 95, lowerIsBetter: false, base: 95.6, spread: 3 },
+  "Inspection pass": { unit: "%", target: 90, lowerIsBetter: false, base: 93, spread: 5 },
+} as const
+type TrendMetric = keyof typeof trendMetrics
+
+function ReportTrendChart({ period, zone, facilityType }: { period: string; zone: string; facilityType: string }) {
+  const [metric, setMetric] = useState<TrendMetric>("Response time")
+  const [hover, setHover] = useState<number | null>(null)
+  const config = trendMetrics[metric]
+  const days = period === "Last 7 days" ? 7 : period === "This quarter" ? 13 : 30
+  const label = period === "This quarter" ? "Week" : "Day"
+  const seed = (zone.length * 7 + facilityType.length * 3) % 11
+  const values = Array.from({ length: days }, (_, i) => {
+    const wave = Math.sin((i + seed) * 1.3) * 0.6 + Math.cos((i * 0.7 + seed) * 0.9) * 0.4
+    return +(config.base + wave * config.spread).toFixed(1)
+  })
+  const fmt = (v: number) =>
+    config.unit === "%" ? `${v.toFixed(1)}%` : `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(Math.round(v % 60)).padStart(2, "0")}`
+  const met = (v: number) => (config.lowerIsBetter ? v <= config.target : v >= config.target)
+  const metCount = values.filter(met).length
+  const avg = values.reduce((a, b) => a + b, 0) / values.length
+  const lo = Math.min(...values, config.target) - config.spread * 0.3
+  const hi = Math.max(...values, config.target) + config.spread * 0.3
+  const W = 640, H = 200, P = 8
+  const x = (i: number) => P + (i / (days - 1)) * (W - P * 2)
+  const y = (v: number) => H - P - ((v - lo) / (hi - lo)) * (H - P * 2)
+  const line = values.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ")
+  const ty = y(config.target)
+  return (
+    <article className="chart-panel trend-chart">
+      <div className="trend-head">
+        <div>
+          <span className="eyebrow">{period.toUpperCase()} · {zone} · {facilityType}</span>
+          <h2>{metric} vs target</h2>
+        </div>
+        <div className="trend-tabs" role="tablist" aria-label="Metric">
+          {(Object.keys(trendMetrics) as TrendMetric[]).map((m) => (
+            <button key={m} role="tab" aria-selected={metric === m} className={metric === m ? "active" : ""} onClick={() => setMetric(m)}>
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="trend-kpis">
+        <div><small>Average</small><strong><bdi>{fmt(avg)}</bdi></strong></div>
+        <div><small>Target</small><strong><bdi>{config.lowerIsBetter ? "≤ " : "≥ "}{fmt(config.target)}</bdi></strong></div>
+        <div><small>{label}s on target</small><strong><bdi>{metCount} / {days}</bdi></strong></div>
+        <div><small>Missed</small><strong className={days - metCount ? "miss" : ""}><bdi>{days - metCount}</bdi></strong></div>
+      </div>
+      <div className="trend-plot" onMouseLeave={() => setHover(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`${metric} by ${label.toLowerCase()}, ${metCount} of ${days} on target`}>
+          <rect className="trend-band" x={0} width={W} y={config.lowerIsBetter ? ty : 0} height={config.lowerIsBetter ? H - ty : ty} />
+          <line className="trend-target" x1={0} x2={W} y1={ty} y2={ty} />
+          <path className="trend-line" d={line} />
+          {hover !== null && <line className="trend-cursor" x1={x(hover)} x2={x(hover)} y1={0} y2={H} />}
+        </svg>
+        {values.map((v, i) => (
+          <i
+            key={i}
+            className={`trend-dot ${met(v) ? "" : "miss"} ${hover === i ? "active" : ""}`}
+            style={{ left: `${(x(i) / W) * 100}%`, top: `${(y(v) / H) * 100}%` }}
+          />
+        ))}
+        <div className="trend-hit">
+          {values.map((_, i) => (
+            <span key={i} onMouseEnter={() => setHover(i)} />
+          ))}
+        </div>
+        {hover !== null && (
+          <div className="trend-tip" style={{ left: `${(x(hover) / W) * 100}%` }}>
+            <b>{label} {hover + 1}</b>
+            <span><bdi>{fmt(values[hover])}</bdi> · {met(values[hover]) ? "On target" : "Missed target"}</span>
+          </div>
+        )}
+        <span className="trend-target-label">Target <bdi>{fmt(config.target)}</bdi></span>
+      </div>
+      <div className="trend-axis"><span>{label} 1</span><span>{label} {Math.ceil(days / 2)}</span><span>{label} {days}</span></div>
+      <p className="trend-legend"><i /> On target <i className="miss" /> Missed target — hover a point for detail.</p>
+    </article>
+  )
+}
+
+function IntroActions({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  useEffect(() => setTarget(document.getElementById("page-intro-actions")), [])
+  return target ? createPortal(children, target) : null
+}
+
 function ReportsPage() {
   const [period, setPeriod] = useState("Last 30 days")
   const [zone, setZone] = useState("All Zones")
@@ -3989,6 +5271,7 @@ function ReportsPage() {
         : "95.8%"
   return (
     <div className="content-page">
+      <IntroActions>
       <div className="report-filters">
         <Dropdown
           label="PERIOD"
@@ -4010,6 +5293,7 @@ function ReportsPage() {
         />
         <Button onClick={() => setExported(true)}>Export report</Button>
       </div>
+      </IntroActions>
       <div className="page-stats">
         <Stat
           label="SLA performance"
@@ -4037,7 +5321,7 @@ function ReportsPage() {
         />
       </div>
       <section className="reports-grid">
-        <PerformanceChart key={`${period}-${zone}-${facilityType}`} />
+        <ReportTrendChart period={period} zone={zone} facilityType={facilityType} />
         <article className="report-breakdown">
           <span className="eyebrow">BY FACILITY TYPE</span>
           <h2>Service standard</h2>
@@ -4347,8 +5631,65 @@ function SecondaryPage({
   return <SettingsPage />
 }
 
+function ShiftPulseBar({
+  ownership,
+  navigate,
+}: {
+  ownership: Ownership
+  navigate: (page: Page) => void
+}) {
+  const unassigned = Object.values(ownership).filter((item) => item.taskStatus === "Unassigned").length + 1
+  const closed = Object.values(ownership).filter((item) => item.closed).length
+  type Chip = { label: string; count: number; icon: string; tone: Tone; page: Page }
+  const chips = ([
+    { label: "Unassigned", count: unassigned, icon: "Tasks", tone: "attention", page: "Tasks" },
+    { label: "Breaching soon", count: 1, icon: "alert", tone: "critical", page: "Tasks" },
+    { label: "Blocked", count: 1, icon: "Issues", tone: "critical", page: "Issues" },
+    { label: "Inspections due", count: 2, icon: "Quality", tone: "cleaning", page: "Quality" },
+    { label: "Out of service", count: closed, icon: "lock", tone: "critical", page: "Issues" },
+  ] as Chip[]).filter((chip) => chip.count > 0)
+  return (
+    <nav className="shift-pulse" aria-label="Shift pulse">
+      <span className="eyebrow">SHIFT PULSE</span>
+      {chips.length === 0 ? (
+        <span className="pulse-calm">
+          <Icon name="Quality" size={14} /> Shift on track
+        </span>
+      ) : (
+        chips.map((chip) => (
+          <button key={chip.label} className={`pulse-chip ${chip.tone}`} onClick={() => navigate(chip.page)}>
+            <Icon name={chip.icon} size={14} />
+            <b>{chip.count}</b> {chip.label}
+          </button>
+        ))
+      )}
+      <span className="pulse-meta">
+        <i /> Live · synced now
+      </span>
+    </nav>
+  )
+}
+
+const storedOwnership = (): Ownership => {
+  try {
+    return JSON.parse(localStorage.getItem("optimo-ownership") ?? "") as Ownership
+  } catch {
+    return initialOwnership
+  }
+}
+
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false)
+  const [role, setRole] = useState<Role>("Duty Manager")
+  const [booting, setBooting] = useState(false)
+  const [scope, setScope] = useState("My zones")
+  const [ownership, setOwnershipState] = useState<Ownership>(storedOwnership)
+  const setOwnership = (update: (current: Ownership) => Ownership) =>
+    setOwnershipState((current) => {
+      const next = update(current)
+      localStorage.setItem("optimo-ownership", JSON.stringify(next))
+      return next
+    })
   const [language, setLanguage] = useState<Language>("en")
   const [page, setPage] = useState<Page>("Excellence Center")
   const [context] = useState<OperationalContext>({
@@ -4358,14 +5699,34 @@ export default function App() {
   })
   const [focusFacility, setFocusFacility] = useState<string | null>(null)
   const [focusTask, setFocusTask] = useState<string | null>(null)
-  const root = useArabicTranslation(language, page)
+  const root = useArabicTranslation(language, `${page}-${role}-${booting}`)
+  const enter = (nextRole: Role) => {
+    setRole(nextRole)
+    setPage("Excellence Center")
+    setFocusFacility(null)
+    setFocusTask(null)
+    setBooting(true)
+    window.setTimeout(() => setBooting(false), 700)
+  }
+  const forbidden = role === "Supervisor" && page === "Settings"
   const content = useMemo(
     () =>
-      page === "Excellence Center" ? (
+      booting ? (
+        <DashboardSkeleton />
+      ) : forbidden ? (
+        <PermissionState page={page} role={role} goBack={() => setPage("Excellence Center")} />
+      ) : page === "Role Matrix" ? (
+        <RoleMatrixPage role={role} />
+      ) : page === "Excellence Center" ? (
         <ExcellenceCenter
+          key={role}
           navigate={setPage}
           context={context}
           focusFacility={focusFacility}
+          role={role}
+          scope={scope}
+          ownership={ownership}
+          setOwnership={setOwnership}
           openTask={(taskId) => {
             setFocusTask(taskId)
             setPage("Tasks")
@@ -4381,14 +5742,17 @@ export default function App() {
           }}
         />
       ),
-    [page, context, focusFacility, focusTask],
+    [page, context, focusFacility, focusTask, role, scope, ownership, booting, forbidden],
   )
   if (!authenticated)
     return (
       <Login
         language={language}
         setLanguage={setLanguage}
-        onSuccess={() => setAuthenticated(true)}
+        onSuccess={(nextRole) => {
+          setAuthenticated(true)
+          enter(nextRole)
+        }}
       />
     )
   return (
@@ -4399,6 +5763,7 @@ export default function App() {
       ref={root}
     >
       <Sidebar
+        role={role}
         active={page}
         setActive={(nextPage) => {
           setPage(nextPage)
@@ -4408,6 +5773,10 @@ export default function App() {
       />
       <main>
         <Header
+          role={role}
+          scope={scope}
+          setScope={setScope}
+          switchRole={enter}
           page={page}
           language={language}
           setLanguage={setLanguage}
@@ -4428,6 +5797,21 @@ export default function App() {
             setFocusTask(null)
           }}
         />
+        {role === "Supervisor" && !booting && !forbidden && page !== "Excellence Center" && page !== "Role Matrix" && (
+          <ShiftPulseBar ownership={ownership} navigate={setPage} />
+        )}
+        {page !== "Excellence Center" && !booting && (
+          <div className="page-intro page-heading">
+            <div className="page-intro-copy">
+              <div className="live-label">
+                <i /> LIVE OPERATIONS <span>· UPDATED NOW</span>
+              </div>
+              <h1>{page}</h1>
+              <p>{pageDescriptions[page]}</p>
+            </div>
+            <div id="page-intro-actions" className="page-intro-actions" />
+          </div>
+        )}
         {content}
       </main>
     </div>
