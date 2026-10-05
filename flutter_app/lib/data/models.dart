@@ -15,7 +15,17 @@ extension RoleX on Role {
   }
 }
 
-enum AppPage { excellence, tasks, schedule, team, quality, issues, reports, settings, roleMatrix }
+enum AppPage {
+  excellence,
+  tasks,
+  schedule,
+  team,
+  quality,
+  issues,
+  reports,
+  settings,
+  roleMatrix
+}
 
 extension AppPageX on AppPage {
   String get label {
@@ -73,14 +83,24 @@ class Account {
 }
 
 class Ownership {
-  const Ownership({this.assignee, this.taskStatus, this.closed = false, this.restored = false, this.reason});
+  const Ownership(
+      {this.assignee,
+      this.taskStatus,
+      this.closed = false,
+      this.restored = false,
+      this.reason});
   final String? assignee;
   final String? taskStatus;
   final bool closed;
   final bool restored;
   final String? reason;
 
-  Ownership copyWith({String? assignee, String? taskStatus, bool? closed, bool? restored, String? reason}) =>
+  Ownership copyWith(
+          {String? assignee,
+          String? taskStatus,
+          bool? closed,
+          bool? restored,
+          String? reason}) =>
       Ownership(
         assignee: assignee ?? this.assignee,
         taskStatus: taskStatus ?? this.taskStatus,
@@ -127,7 +147,13 @@ class Facility {
   final String id, type, zone, status;
   final Tone tone;
   final double x, y;
-  final String? detail, occupancy, deviceStatus, deviceId, lastEvent, assigned, taskStatus;
+  final String? detail,
+      occupancy,
+      deviceStatus,
+      deviceId,
+      lastEvent,
+      assigned,
+      taskStatus;
   final bool priority;
 
   bool get isBin => type == 'Waste Bin';
@@ -160,16 +186,25 @@ class Facility {
 }
 
 class TeamMember {
-  const TeamMember(this.name, this.initials, this.active, this.overdue, this.zone, this.shift, this.fit);
+  const TeamMember(this.name, this.initials, this.active, this.overdue,
+      this.zone, this.shift, this.fit);
   final String name, initials, zone, shift;
   final int active, overdue;
   final bool fit;
 }
 
 class TaskRow {
-  const TaskRow(this.id, this.facility, this.location, this.type, this.priority, this.assignee, this.source,
-      this.status, this.sla);
-  final String id, facility, location, type, priority, assignee, source, status, sla;
+  const TaskRow(this.id, this.facility, this.location, this.type, this.priority,
+      this.assignee, this.source, this.status, this.sla);
+  final String id,
+      facility,
+      location,
+      type,
+      priority,
+      assignee,
+      source,
+      status,
+      sla;
 }
 
 class DetailRequest {

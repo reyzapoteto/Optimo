@@ -26,10 +26,12 @@ final _supToastScheduler = Provider<void>((ref) {
 
   final timers = <Timer>[
     Timer(const Duration(seconds: 6), () {
-      push(const SupToast('t1', 'SH-05', 'Shower requires cleaning', 'Response due in 03:10', Tone.attention));
+      push(const SupToast('t1', 'SH-05', 'Shower requires cleaning',
+          'Response due in 03:10', Tone.attention));
     }),
     Timer(const Duration(seconds: 14), () {
-      push(const SupToast('t2', 'SH-06', 'Leak alert', 'Detected now', Tone.critical));
+      push(const SupToast(
+          't2', 'SH-06', 'Leak alert', 'Detected now', Tone.critical));
     }),
   ];
   ref.onDispose(() {
@@ -49,8 +51,8 @@ class SupervisorToasts extends ConsumerWidget {
     final toasts = ref.watch(supToastsProvider);
     final t = context.tk;
     if (toasts.isEmpty) return const SizedBox.shrink();
-    void dismiss(String id) =>
-        ref.read(supToastsProvider.notifier).state = ref.read(supToastsProvider).where((e) => e.id != id).toList();
+    void dismiss(String id) => ref.read(supToastsProvider.notifier).state =
+        ref.read(supToastsProvider).where((e) => e.id != id).toList();
     return PositionedDirectional(
       top: 24,
       end: 24,
@@ -64,27 +66,43 @@ class SupervisorToasts extends ConsumerWidget {
               elevation: 12,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: toast.tone == Tone.critical ? t.coral : t.line),
+                side: BorderSide(
+                    color: toast.tone == Tone.critical ? t.coral : t.line),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(14),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Icon(Icons.error_outline, size: 18, color: toneColor(toast.tone)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      T(toast.title, style: ts(13, weight: FontWeight.w500)),
-                      const SizedBox(height: 4),
-                      Text('${toast.facility} · ${context.tr(toast.time)}', style: ts(12, color: t.muted)),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.error_outline,
+                          size: 18, color: toneColor(toast.tone)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              T(toast.title,
+                                  style: ts(13, weight: FontWeight.w500)),
+                              const SizedBox(height: 4),
+                              Text(
+                                  '${toast.facility} · ${context.tr(toast.time)}',
+                                  style: ts(12, color: t.muted)),
+                            ]),
+                      ),
+                      LinkButton('View', onTap: () {
+                        dismiss(toast.id);
+                        ref.read(actionsProvider).openFacility(
+                            toast.facility == 'SH-06'
+                                ? 'SH-04'
+                                : toast.facility);
+                      }),
+                      const SizedBox(width: 8),
+                      IconBtn(Icons.close,
+                          size: 24,
+                          iconSize: 14,
+                          bordered: false,
+                          onTap: () => dismiss(toast.id)),
                     ]),
-                  ),
-                  LinkButton('View', onTap: () {
-                    dismiss(toast.id);
-                    ref.read(actionsProvider).openFacility(toast.facility == 'SH-06' ? 'SH-04' : toast.facility);
-                  }),
-                  const SizedBox(width: 8),
-                  IconBtn(Icons.close, size: 24, iconSize: 14, bordered: false, onTap: () => dismiss(toast.id)),
-                ]),
               ),
             ),
           ),
@@ -97,7 +115,8 @@ class SupervisorToasts extends ConsumerWidget {
 final supToastAutoDismiss = Provider<void>((ref) {
   Timer? timer;
   ref.listen<List<SupToast>>(supToastsProvider, (prev, next) {
-    final added = next.any((e) => e.id == 't1') && !(prev ?? const []).any((e) => e.id == 't1');
+    final added = next.any((e) => e.id == 't1') &&
+        !(prev ?? const []).any((e) => e.id == 't1');
     if (added) {
       timer?.cancel();
       timer = Timer(const Duration(seconds: 8), () {

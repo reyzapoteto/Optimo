@@ -7,12 +7,19 @@ class AppFonts {
   static TextStyle body({bool arabic = false}) =>
       arabic ? GoogleFonts.notoSansArabic() : GoogleFonts.manrope();
 
-  static TextStyle title(double size, {bool arabic = false, Color? color}) =>
+  static TextStyle title(double size,
+          {bool arabic = false, Color? color}) =>
       arabic
           ? GoogleFonts.notoSansArabic(
-              fontSize: size - 6, fontWeight: FontWeight.w600, color: color ?? kTokens.ivory, height: 1.15)
+              fontSize: size - 6,
+              fontWeight: FontWeight.w600,
+              color: color ?? kTokens.ivory,
+              height: 1.15)
           : GoogleFonts.cormorantGaramond(
-              fontSize: size, fontWeight: FontWeight.w600, color: color ?? kTokens.ivory, height: 1.05);
+              fontSize: size,
+              fontWeight: FontWeight.w600,
+              color: color ?? kTokens.ivory,
+              height: 1.05);
 }
 
 ThemeData buildTheme({required bool arabic}) {

@@ -14,7 +14,11 @@ class Seg {
 
 /// Ring / donut drawn with arcs starting at 12 o'clock.
 class DonutPainter extends CustomPainter {
-  DonutPainter({required this.segments, required this.stroke, this.track = AppTokens.track, this.gapDeg = 0});
+  DonutPainter(
+      {required this.segments,
+      required this.stroke,
+      this.track = AppTokens.track,
+      this.gapDeg = 0});
   final List<Seg> segments;
   final double stroke;
   final Color track;
@@ -30,8 +34,10 @@ class DonutPainter extends CustomPainter {
       ..color = track;
     canvas.drawCircle(rect.center, r, p);
     for (final s in segments) {
-      final start = -math.pi / 2 + s.from / 100 * 2 * math.pi + gapDeg * math.pi / 180;
-      final sweep = (s.to - s.from) / 100 * 2 * math.pi - 2 * gapDeg * math.pi / 180;
+      final start =
+          -math.pi / 2 + s.from / 100 * 2 * math.pi + gapDeg * math.pi / 180;
+      final sweep =
+          (s.to - s.from) / 100 * 2 * math.pi - 2 * gapDeg * math.pi / 180;
       if (sweep <= 0) continue;
       canvas.drawArc(rect, start, sweep, false, p..color = s.color);
     }
@@ -42,7 +48,12 @@ class DonutPainter extends CustomPainter {
 }
 
 class Donut extends StatelessWidget {
-  const Donut({super.key, required this.size, required this.stroke, required this.segments, required this.center});
+  const Donut(
+      {super.key,
+      required this.size,
+      required this.stroke,
+      required this.segments,
+      required this.center});
   final double size, stroke;
   final List<Seg> segments;
   final Widget center;
@@ -103,7 +114,10 @@ class PerformancePainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [kTokens.yellow.withOpacity(0.18), kTokens.yellow.withOpacity(0)],
+          colors: [
+            kTokens.yellow.withOpacity(0.18),
+            kTokens.yellow.withOpacity(0)
+          ],
         ).createShader(const Rect.fromLTWH(0, 60, 800, 120)),
     );
     // target line (dashed)
@@ -121,13 +135,24 @@ class PerformancePainter extends CustomPainter {
         ..strokeWidth = 2 / sy,
     );
     if (hover) {
-      canvas.drawLine(const Offset(520, 0), const Offset(520, 180), Paint()..color = kTokens.muted2..strokeWidth = 1 / sx);
+      canvas.drawLine(
+          const Offset(520, 0),
+          const Offset(520, 180),
+          Paint()
+            ..color = kTokens.muted2
+            ..strokeWidth = 1 / sx);
     }
     canvas.restore();
     if (hover) {
       final c = Offset(520 * sx, 110 * sy);
       canvas.drawCircle(c, 5, Paint()..color = kTokens.canvas);
-      canvas.drawCircle(c, 5, Paint()..color = kTokens.yellow..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawCircle(
+          c,
+          5,
+          Paint()
+            ..color = kTokens.yellow
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2);
     }
   }
 
@@ -148,7 +173,8 @@ class _PerformanceChartState extends State<PerformanceChart> {
   @override
   Widget build(BuildContext context) {
     final t = context.tk;
-    final avg = {'Today': '01:48', '7 days': '01:53', '30 days': '01:57'}[range]!;
+    final avg =
+        {'Today': '01:48', '7 days': '01:53', '30 days': '01:57'}[range]!;
     final pct = {'Today': '12%', '7 days': '7%', '30 days': '3%'}[range]!;
     return Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -163,25 +189,41 @@ class _PerformanceChartState extends State<PerformanceChart> {
           ),
         ),
         const SizedBox(height: 16),
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(avg, style: ts(28, weight: FontWeight.w500)),
-          const SizedBox(width: 8),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 5),
-            child: T('Average response', style: ts(10, color: t.muted)),
-          ),
-          const Spacer(),
-          Text('$pct ${context.tr('faster than target')}', style: ts(10, color: t.green, weight: FontWeight.w600)),
-        ]),
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
+              Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(avg, style: ts(28, weight: FontWeight.w500)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: T('Average response',
+                            style: ts(10, color: t.muted)),
+                      ),
+                    ),
+                  ]),
+              Text('$pct ${context.tr('faster than target')}',
+                  style: ts(10, color: t.green, weight: FontWeight.w600)),
+            ]),
         const SizedBox(height: 16),
         SizedBox(
           height: 200,
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             SizedBox(
               width: 40,
-              child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                for (final l in ['03:00', '02:00', '01:00']) Text(l, style: ts(8, color: t.muted2)),
-              ]),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    for (final l in ['03:00', '02:00', '01:00'])
+                      Text(l, style: ts(8, color: t.muted2)),
+                  ]),
             ),
             Expanded(
               child: LayoutBuilder(builder: (context, c) {
@@ -191,10 +233,13 @@ class _PerformanceChartState extends State<PerformanceChart> {
                   child: GestureDetector(
                     onTap: () => setState(() => hover = !hover),
                     child: Stack(clipBehavior: Clip.none, children: [
-                      Positioned.fill(child: CustomPaint(painter: PerformancePainter(hover: hover))),
+                      Positioned.fill(
+                          child: CustomPaint(
+                              painter: PerformancePainter(hover: hover))),
                       if (hover)
                         Positioned(
-                          left: (520 / 800 * c.maxWidth - 70).clamp(0.0, c.maxWidth - 140),
+                          left: (520 / 800 * c.maxWidth - 70)
+                              .clamp(0.0, c.maxWidth - 140),
                           top: 0,
                           child: Container(
                             width: 140,
@@ -204,13 +249,19 @@ class _PerformanceChartState extends State<PerformanceChart> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: t.line),
                             ),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('10:24 AM', style: ts(9, color: t.muted2)),
-                              const SizedBox(height: 4),
-                              Text('${context.tr('Response')} 01:42', style: ts(11, weight: FontWeight.w600)),
-                              Text('${context.tr('Target')} 02:00', style: ts(9, color: t.muted)),
-                              Text(context.tr('18 sec faster'), style: ts(9, color: t.green)),
-                            ]),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('10:24 AM',
+                                      style: ts(9, color: t.muted2)),
+                                  const SizedBox(height: 4),
+                                  Text('${context.tr('Response')} 01:42',
+                                      style: ts(11, weight: FontWeight.w600)),
+                                  Text('${context.tr('Target')} 02:00',
+                                      style: ts(9, color: t.muted)),
+                                  Text(context.tr('18 sec faster'),
+                                      style: ts(9, color: t.green)),
+                                ]),
                           ),
                         ),
                     ]),
@@ -223,8 +274,10 @@ class _PerformanceChartState extends State<PerformanceChart> {
         const SizedBox(height: 8),
         Padding(
           padding: const EdgeInsetsDirectional.only(start: 40),
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            for (final l in ['08:00', '09:00', '10:00', '11:00', '12:00']) Text(l, style: ts(8, color: t.muted2)),
+          child:
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            for (final l in ['08:00', '09:00', '10:00', '11:00', '12:00'])
+              Text(l, style: ts(8, color: t.muted2)),
           ]),
         ),
       ]),
@@ -272,7 +325,8 @@ class ShiftFlowPainter extends CustomPainter {
       canvas.drawLine(p(0, gy), p(800, gy), grid);
     }
     if (hoverCol != null) {
-      canvas.drawRect(Rect.fromLTWH(hoverCol! * 100 * sx, 0, 100 * sx, size.height),
+      canvas.drawRect(
+          Rect.fromLTWH(hoverCol! * 100 * sx, 0, 100 * sx, size.height),
           Paint()..color = Colors.white.withOpacity(0.03));
     }
     final gap = Path()..moveTo(_xs[0] * sx, y(data.created[0]) * sy);
@@ -311,11 +365,13 @@ class ShiftFlowPainter extends CustomPainter {
     for (double x = _xs.last; x < 800; x += 10) {
       canvas.drawLine(p(x, 176), p(math.min(x + 5, 800), 176), dash);
     }
-    canvas.drawLine(p(_xs.last, 8), p(_xs.last, 186), Paint()..color = kTokens.yellowSoft.withOpacity(0.6));
+    canvas.drawLine(p(_xs.last, 8), p(_xs.last, 186),
+        Paint()..color = kTokens.yellowSoft.withOpacity(0.6));
   }
 
   @override
-  bool shouldRepaint(covariant ShiftFlowPainter old) => old.hoverCol != hoverCol;
+  bool shouldRepaint(covariant ShiftFlowPainter old) =>
+      old.hoverCol != hoverCol;
 }
 
 class ShiftFlow extends StatefulWidget {
@@ -331,16 +387,19 @@ class _ShiftFlowState extends State<ShiftFlow> {
   @override
   Widget build(BuildContext context) {
     final t = context.tk;
+    final narrow = MediaQuery.sizeOf(context).width < 768;
     return Panel(
-      height: 296,
+      height: narrow ? 380 : 296,
       radius: 16,
+      padding: EdgeInsets.all(narrow ? 16 : 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SectionHead(
           eyebrow: 'SHIFT FLOW',
           title: 'Created vs completed',
-          trailing: Wrap(spacing: 8, children: [
+          trailing: Wrap(spacing: 8, runSpacing: 8, children: [
             _chip(context, '${context.tr('Backlog')} ${data.backlog}'),
-            _chip(context, '${context.tr('Avg response')} 01:48 · ${context.tr('target')} 02:00'),
+            _chip(context,
+                '${context.tr('Avg response')} 01:48 · ${context.tr('target')} 02:00'),
           ]),
         ),
         const SizedBox(height: 12),
@@ -356,23 +415,29 @@ class _ShiftFlowState extends State<ShiftFlow> {
             return Directionality(
               textDirection: TextDirection.ltr,
               child: MouseRegion(
-                onHover: (e) => setState(() => hover = colAt(e.localPosition.dx)),
+                onHover: (e) =>
+                    setState(() => hover = colAt(e.localPosition.dx)),
                 onExit: (_) => setState(() => hover = null),
                 child: Stack(clipBehavior: Clip.none, children: [
-                  Positioned.fill(child: CustomPaint(painter: ShiftFlowPainter(data, hover))),
+                  Positioned.fill(
+                      child:
+                          CustomPaint(painter: ShiftFlowPainter(data, hover))),
                   Positioned(
                     left: _xs.last / 800 * w + 6,
                     top: 0,
-                    child: Text('${context.tr('Now')} · 10:24', style: ts(9, color: t.yellowSoft)),
+                    child: Text('${context.tr('Now')} · 10:24',
+                        style: ts(9, color: t.yellowSoft)),
                   ),
                   Positioned(
                     left: _xs.last / 800 * w + 6,
-                    top: (176 - data.created.last * 10) / 200 * c.maxHeight - 14,
+                    top:
+                        (176 - data.created.last * 10) / 200 * c.maxHeight - 14,
                     child: T('Created', style: ts(9, color: t.muted)),
                   ),
                   Positioned(
                     left: _xs.last / 800 * w + 6,
-                    top: (176 - data.completed.last * 10) / 200 * c.maxHeight + 2,
+                    top: (176 - data.completed.last * 10) / 200 * c.maxHeight +
+                        2,
                     child: T('Completed', style: ts(9, color: t.yellow)),
                   ),
                   if (hover != null)
@@ -386,16 +451,20 @@ class _ShiftFlowState extends State<ShiftFlow> {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: t.line),
                         ),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('${(7 + hover!).toString().padLeft(2, '0')}:00–${(8 + hover!).toString().padLeft(2, '0')}:00',
-                              style: ts(9, color: t.muted2)),
-                          const SizedBox(height: 4),
-                          Text(
-                              '${context.tr('Created')} ${_hours[hover!].$1} · ${context.tr('Completed')} ${_hours[hover!].$2}',
-                              style: ts(10, weight: FontWeight.w600)),
-                          Text('${context.tr('Backlog')} +${_hours[hover!].$1 - _hours[hover!].$2}',
-                              style: ts(9, color: t.yellow)),
-                        ]),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  '${(7 + hover!).toString().padLeft(2, '0')}:00–${(8 + hover!).toString().padLeft(2, '0')}:00',
+                                  style: ts(9, color: t.muted2)),
+                              const SizedBox(height: 4),
+                              Text(
+                                  '${context.tr('Created')} ${_hours[hover!].$1} · ${context.tr('Completed')} ${_hours[hover!].$2}',
+                                  style: ts(10, weight: FontWeight.w600)),
+                              Text(
+                                  '${context.tr('Backlog')} +${_hours[hover!].$1 - _hours[hover!].$2}',
+                                  style: ts(9, color: t.yellow)),
+                            ]),
                       ),
                     ),
                 ]),
@@ -406,8 +475,13 @@ class _ShiftFlowState extends State<ShiftFlow> {
         const SizedBox(height: 8),
         Directionality(
           textDirection: TextDirection.ltr,
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            for (var h = 7; h <= 15; h++) Text('${h.toString().padLeft(2, '0')}:00', style: ts(8, color: t.muted2)),
+          child:
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            // Fewer axis labels on phones instead of smaller text.
+            for (var h = 7; h <= 15; h += narrow ? 4 : 1)
+              Text('${h.toString().padLeft(2, '0')}:00',
+                  style: ts(narrow ? 12 : 8, color: t.muted2).copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()])),
           ]),
         ),
       ]),

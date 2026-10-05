@@ -19,7 +19,8 @@ class SupervisorCenter extends ConsumerStatefulWidget {
 }
 
 class _QItem {
-  const _QItem(this.id, this.type, this.zone, this.status, this.time, this.tone, this.owner,
+  const _QItem(this.id, this.type, this.zone, this.status, this.time, this.tone,
+      this.owner,
       {this.action, this.onAction, this.viewOnly = false});
   final String id, type, zone, status, time;
   final Tone tone;
@@ -37,25 +38,67 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
     ref.listen<String?>(focusFacilityProvider, (_, next) {
       if (next != null) setState(() => selected = next);
     });
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SpanRow(spans: const [4, 4, 4], children: [_zoneReadiness(context), _slaRisk(context), _teamLoad(context)]),
-      const SizedBox(height: 24),
-      SpanRow(spans: const [9, 3], breakpoint: 1181, children: [
-        DigitalTwin(
-          role: Role.supervisor,
-          selectedId: selected,
-          onSelect: (id) => setState(() => selected = id),
-          attentionFilter: false,
-          onClearFilter: () {},
-        ),
+    final twin = DigitalTwin(
+      role: Role.supervisor,
+      selectedId: selected,
+      onSelect: (id) => setState(() => selected = id),
+      attentionFilter: false,
+      onClearFilter: () {},
+    );
+    return LayoutBuilder(builder: (context, c) {
+      final w = c.maxWidth;
+      final gap = w < 720 ? 16.0 : 24.0;
+      if (w >= 1181) {
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SpanRow(spans: const [
+                4,
+                4,
+                4
+              ], children: [
+                _zoneReadiness(context),
+                _slaRisk(context),
+                _teamLoad(context)
+              ]),
+              const SizedBox(height: 24),
+              SpanRow(
+                  spans: const [9, 3],
+                  breakpoint: 1181,
+                  children: [twin, _queue(context)]),
+              const SizedBox(height: 24),
+              const ShiftFlow(),
+            ]);
+      }
+      // Narrow: urgent decisions first, then readiness/SLA/workload, then the twin.
+      final cols = w >= 900 ? 3 : (w >= 600 ? 2 : 1);
+      final cw = (w - gap * (cols - 1)) / cols;
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _queue(context),
-      ]),
-      const SizedBox(height: 24),
-      const ShiftFlow(),
-    ]);
+        SizedBox(height: gap),
+        Wrap(spacing: gap, runSpacing: gap, children: [
+          for (final card in [
+            _slaRisk(context),
+            _zoneReadiness(context),
+            _teamLoad(context)
+          ])
+            SizedBox(width: cw, child: card),
+        ]),
+        SizedBox(height: gap),
+        twin,
+        SizedBox(height: gap),
+        const ShiftFlow(),
+      ]);
+    });
   }
 
-  Widget _card({required Widget child}) => Panel(height: 224, radius: 16, child: child);
+  Widget _card({required Widget child}) => Builder(
+      builder: (context) => Panel(
+          height: 224,
+          radius: 16,
+          padding:
+              EdgeInsets.all(MediaQuery.sizeOf(context).width < 768 ? 16 : 24),
+          child: child));
 
   Widget _zoneReadiness(BuildContext context) {
     final t = context.tk;
@@ -77,7 +120,8 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
         Expanded(
           child: Row(children: [
             Tooltip(
-              message: '${context.tr('SERVICE REQUIRED')} · $attention ${context.tr('facilities')} · ${(ap).round()}%',
+              message:
+                  '${context.tr('SERVICE REQUIRED')} · $attention ${context.tr('facilities')} · ${(ap).round()}%',
               child: Donut(
                 size: 128,
                 stroke: 12,
@@ -94,13 +138,18 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
             ),
             const SizedBox(width: 20),
             Expanded(
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('$monitored ${context.tr('monitored')}', style: ts(10, color: t.muted)),
-                const SizedBox(height: 8),
-                _legend(t.yellow, '$ready ${context.tr('ready')} ($pct%)'),
-                _legend(t.yellowSoft, '$attention ${context.tr('need attention')}'),
-                _legend(t.coral, '$critical ${context.tr('critical')}'),
-              ]),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$monitored ${context.tr('monitored')}',
+                        style: ts(10, color: t.muted)),
+                    const SizedBox(height: 8),
+                    _legend(t.yellow, '$ready ${context.tr('ready')} ($pct%)'),
+                    _legend(t.yellowSoft,
+                        '$attention ${context.tr('need attention')}'),
+                    _legend(t.coral, '$critical ${context.tr('critical')}'),
+                  ]),
             ),
           ]),
         ),
@@ -125,7 +174,8 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Eyebrow('SLA RISK'),
         const SizedBox(height: 14),
-        Text(unassigned ? '00:42' : '02:10', style: ts(32, color: t.yellow, weight: FontWeight.w500)),
+        Text(unassigned ? '00:42' : '02:10',
+            style: ts(32, color: t.yellow, weight: FontWeight.w500)),
         const SizedBox(height: 4),
         Text(
             unassigned
@@ -134,31 +184,49 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
             style: ts(10, color: t.muted)),
         const Spacer(),
         Row(children: [
-          Expanded(flex: 4, child: Container(height: 6, decoration: BoxDecoration(color: t.green, borderRadius: BorderRadius.circular(3)))),
+          Expanded(
+              flex: 4,
+              child: Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                      color: t.green, borderRadius: BorderRadius.circular(3)))),
           const SizedBox(width: 4),
-          Expanded(flex: 2, child: Container(height: 6, decoration: BoxDecoration(color: t.yellow, borderRadius: BorderRadius.circular(3)))),
+          Expanded(
+              flex: 2,
+              child: Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                      color: t.yellow,
+                      borderRadius: BorderRadius.circular(3)))),
         ]),
         const SizedBox(height: 10),
-        Row(children: [
+        Wrap(runSpacing: 4, children: [
           _legendInline(t.green, '4 ${context.tr('Within')}'),
           _legendInline(t.yellow, '2 ${context.tr('Approaching')}'),
           _legendInline(t.coral, '0 ${context.tr('Breached')}'),
         ]),
         const SizedBox(height: 12),
-        LinkButton('View at-risk tasks', arrow: true, onTap: () => ref.read(actionsProvider).navigate(AppPage.tasks)),
+        LinkButton('View at-risk tasks',
+            arrow: true,
+            onTap: () => ref.read(actionsProvider).navigate(AppPage.tasks)),
       ]),
     );
   }
 
   Widget _legendInline(Color c, String text) => Padding(
         padding: const EdgeInsetsDirectional.only(end: 14),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [Dot(c), const SizedBox(width: 6), Text(text, style: ts(9, color: kTokens.muted))]),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Dot(c),
+          const SizedBox(width: 6),
+          Text(text, style: ts(9, color: kTokens.muted))
+        ]),
       );
 
   Widget _teamLoad(BuildContext context) {
     final t = context.tk;
     final own = ref.watch(ownershipProvider);
-    final unassigned = own.values.where((o) => o.taskStatus == 'Unassigned').length + 1;
+    final unassigned =
+        own.values.where((o) => o.taskStatus == 'Unassigned').length + 1;
     final rows = [
       for (final m in supervisorTeam)
         (
@@ -171,16 +239,19 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Expanded(child: Eyebrow('TEAM LOAD')),
-          LinkButton('Open dispatch board', onTap: () => ref.read(actionsProvider).navigate(AppPage.tasks)),
+          LinkButton('Open dispatch board',
+              onTap: () => ref.read(actionsProvider).navigate(AppPage.tasks)),
         ]),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: t.surface2,
-            border: BorderDirectional(start: BorderSide(color: t.yellow, width: 2)),
+            border:
+                BorderDirectional(start: BorderSide(color: t.yellow, width: 2)),
           ),
-          child: Text('$unassigned ${context.tr('Unassigned')}', style: ts(10, color: t.yellow, weight: FontWeight.w600)),
+          child: Text('$unassigned ${context.tr('Unassigned')}',
+              style: ts(10, color: t.yellow, weight: FontWeight.w600)),
         ),
         const SizedBox(height: 8),
         for (final r in rows)
@@ -193,8 +264,11 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
                 const SizedBox(width: 8),
                 SizedBox(
                   width: 110,
-                  child: Text('${r.$1.name}${r.$1.name == 'Sara Al-Dosari' ? ' · ${context.tr('Blocked')}' : ''}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis, style: ts(10)),
+                  child: Text(
+                      '${r.$1.name}${r.$1.name == 'Sara Al-Dosari' ? ' · ${context.tr('Blocked')}' : ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: ts(10)),
                 ),
                 Expanded(
                   child: ClipRRect(
@@ -229,35 +303,57 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
     final out = <_QItem>[];
     for (final x in list) {
       if (own[x.id]?.closed == true) {
-        out.add(_QItem(x.id, x.type, x.zone, 'Out of Service', x.detail ?? '', Tone.critical, x.assigned,
-            action: 'Restore', onAction: () => openFacilityControl(context, x, close: false)));
+        out.add(_QItem(x.id, x.type, x.zone, 'Out of Service', x.detail ?? '',
+            Tone.critical, x.assigned,
+            action: 'Restore',
+            onAction: () => openFacilityControl(context, x, close: false)));
       }
     }
     final sh = f('SH-04');
     if (own['SH-04']?.closed != true) {
       final assigned = sh.assigned;
-      out.add(_QItem('SH-04', 'Shower', 'Changing Room A', sh.status,
-          assigned != null ? 'Completion due in 06:30' : 'Response due in 00:42', Tone.attention, assigned,
+      out.add(_QItem(
+          'SH-04',
+          'Shower',
+          'Changing Room A',
+          sh.status,
+          assigned != null
+              ? 'Completion due in 06:30'
+              : 'Response due in 00:42',
+          Tone.attention,
+          assigned,
           action: assigned != null ? 'Open Task' : 'Assign',
-          onAction: assigned != null ? () => a.openTask('TSK-1048') : () => openAssignDialog(context, sh)));
+          onAction: assigned != null
+              ? () => a.openTask('TSK-1048')
+              : () => openAssignDialog(context, sh)));
     }
     final wc = f('WC-02');
     if (own['WC-02']?.closed != true) {
-      out.add(_QItem('WC-02', 'Toilet', 'Toilet Area', 'Cleaning Required', 'SLA breach in 02:10', Tone.critical, wc.assigned,
+      out.add(_QItem('WC-02', 'Toilet', 'Toilet Area', 'Cleaning Required',
+          'SLA breach in 02:10', Tone.critical, wc.assigned,
           action: 'Open Task', onAction: () => a.openTask('TSK-1047')));
     }
     final bin = f('BIN-02');
     if (own['BIN-02']?.closed != true) {
-      out.add(_QItem('BIN-02', 'Waste Bin', 'Vanity Area', '85% full', 'Approaching threshold', Tone.attention, bin.assigned,
+      out.add(_QItem('BIN-02', 'Waste Bin', 'Vanity Area', '85% full',
+          'Approaching threshold', Tone.attention, bin.assigned,
           action: 'Open Task', onAction: () => a.openTask('TSK-1046')));
     }
     if (scope == 'Whole club') {
-      out.add(const _QItem('WB-06', 'Waste Bin', 'Lounge · outside your zones', 'Blocked', 'Breached by 04:20', Tone.critical,
-          'Sara Omar',
+      out.add(const _QItem('WB-06', 'Waste Bin', 'Lounge · outside your zones',
+          'Blocked', 'Breached by 04:20', Tone.critical, 'Sara Omar',
           viewOnly: true));
     } else {
-      out.add(_QItem('SH-01', 'Shower', 'Shower Area', 'Inspection due · Completed 09:58', 'Due by 11:00', Tone.cleaning, null,
-          action: 'Inspect', onAction: () => a.navigate(AppPage.quality)));
+      out.add(_QItem(
+          'SH-01',
+          'Shower',
+          'Shower Area',
+          'Inspection due · Completed 09:58',
+          'Due by 11:00',
+          Tone.cleaning,
+          null,
+          action: 'Inspect',
+          onAction: () => a.navigate(AppPage.quality)));
     }
     return out;
   }
@@ -269,24 +365,33 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
     final shown = items.take(4).toList();
     return Panel(
       radius: 16,
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 768 ? 16 : 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: T('Needs Your Decision', style: ts(16, weight: FontWeight.w500))),
-          Text('${items.length}', style: ts(12, color: t.yellow, weight: FontWeight.w700)),
+          Expanded(
+              child: T('Needs Your Decision',
+                  style: ts(16, weight: FontWeight.w500))),
+          Text('${items.length}',
+              style: ts(12, color: t.yellow, weight: FontWeight.w700)),
         ]),
         const SizedBox(height: 6),
-        T('Prioritized by urgency. Each item shows its owner and next step.', style: ts(10, color: t.muted2)),
+        T('Prioritized by urgency. Each item shows its owner and next step.',
+            style: ts(10, color: t.muted2)),
         const SizedBox(height: 16),
         if (shown.isEmpty) ...[
           T('All clear', style: ts(14, weight: FontWeight.w500)),
           const SizedBox(height: 6),
-          T('All monitored facilities are operating normally.', style: ts(10, color: t.muted)),
+          T('All monitored facilities are operating normally.',
+              style: ts(10, color: t.muted)),
           const SizedBox(height: 12),
-          LinkButton('View upcoming inspections', onTap: () => ref.read(actionsProvider).navigate(AppPage.quality)),
+          LinkButton('View upcoming inspections',
+              onTap: () => ref.read(actionsProvider).navigate(AppPage.quality)),
         ] else
           for (var i = 0; i < shown.length; i++) _qRow(context, i, shown[i]),
         const SizedBox(height: 6),
-        LinkButton('View all in Dispatch Board', arrow: true, onTap: () => ref.read(actionsProvider).navigate(AppPage.tasks)),
+        LinkButton('View all in Dispatch Board',
+            arrow: true,
+            onTap: () => ref.read(actionsProvider).navigate(AppPage.tasks)),
       ]),
     );
   }
@@ -310,38 +415,58 @@ class _SupervisorCenterState extends ConsumerState<SupervisorCenter> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Text((i + 1).toString().padLeft(2, '0'), style: ts(9, color: t.muted2, weight: FontWeight.w700)),
-                    const SizedBox(width: 8),
-                    Text(q.id, style: ts(13, weight: FontWeight.w600)),
-                    const SizedBox(width: 8),
-                    Flexible(child: StatusPill(q.status, tone: q.tone)),
-                  ]),
-                  const SizedBox(height: 4),
-                  Text('${context.tr(q.type)} · ${context.tr(q.zone)}', style: ts(9, color: t.muted)),
-                  const SizedBox(height: 6),
-                  if (q.owner == null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: AppTokens.chipActiveBg, borderRadius: BorderRadius.circular(4)),
-                      child: Text(context.tr('UNASSIGNED'), style: ts(8, color: t.yellow, weight: FontWeight.w700, spacing: 1)),
-                    )
-                  else
-                    Text('${context.tr('Assigned to')} ${q.owner}', style: ts(9, color: t.muted2)),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    Expanded(child: T(q.time, style: ts(9, color: c))),
-                    if (q.viewOnly)
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.visibility_outlined, size: 12, color: t.muted2),
-                        const SizedBox(width: 4),
-                        T('View only', style: ts(9, color: t.muted2)),
-                      ])
-                    else if (q.action != null)
-                      AppButton(label: q.action!, compact: true, kind: q.owner == null ? BtnKind.primary : BtnKind.secondary, onPressed: q.onAction),
-                  ]),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Text((i + 1).toString().padLeft(2, '0'),
+                            style: ts(9,
+                                color: t.muted2, weight: FontWeight.w700)),
+                        const SizedBox(width: 8),
+                        Text(q.id, style: ts(13, weight: FontWeight.w600)),
+                        const SizedBox(width: 8),
+                        Flexible(child: StatusPill(q.status, tone: q.tone)),
+                      ]),
+                      const SizedBox(height: 4),
+                      Text('${context.tr(q.type)} · ${context.tr(q.zone)}',
+                          style: ts(9, color: t.muted)),
+                      const SizedBox(height: 6),
+                      if (q.owner == null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                              color: AppTokens.chipActiveBg,
+                              borderRadius: BorderRadius.circular(4)),
+                          child: Text(context.tr('UNASSIGNED'),
+                              style: ts(8,
+                                  color: t.yellow,
+                                  weight: FontWeight.w700,
+                                  spacing: 1)),
+                        )
+                      else
+                        Text('${context.tr('Assigned to')} ${q.owner}',
+                            style: ts(9, color: t.muted2)),
+                      const SizedBox(height: 6),
+                      Row(children: [
+                        Expanded(child: T(q.time, style: ts(9, color: c))),
+                        if (q.viewOnly)
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.visibility_outlined,
+                                size: 12, color: t.muted2),
+                            const SizedBox(width: 4),
+                            T('View only', style: ts(9, color: t.muted2)),
+                          ])
+                        else if (q.action != null)
+                          AppButton(
+                              label: q.action!,
+                              compact: true,
+                              kind: q.owner == null
+                                  ? BtnKind.primary
+                                  : BtnKind.secondary,
+                              onPressed: q.onAction),
+                      ]),
+                    ]),
               ),
             ),
           ]),

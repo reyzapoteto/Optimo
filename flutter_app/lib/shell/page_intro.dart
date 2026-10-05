@@ -12,7 +12,8 @@ import '../widgets/common.dart';
 class LiveLabel extends StatelessWidget {
   const LiveLabel({super.key});
   @override
-  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+  Widget build(BuildContext context) =>
+      Row(mainAxisSize: MainAxisSize.min, children: [
         Dot(kTokens.green),
         const SizedBox(width: 8),
         const Eyebrow('LIVE OPERATIONS', color: null),
@@ -30,30 +31,44 @@ class PageIntro extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final role = ref.watch(authProvider);
-    final size = role == Role.supervisor ? 30.0 : 34.0;
-    final text = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    final w = MediaQuery.sizeOf(context).width;
+    final responsive = role != null;
+    final size = responsive && w < 768
+        ? 24.0
+        : (responsive && w < 1024
+            ? 28.0
+            : (role == Role.supervisor ? 30.0 : 34.0));
+    final text =
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const LiveLabel(),
       const SizedBox(height: 10),
-      Text(context.tr(page.label), style: AppFonts.title(size, arabic: context.isArabic)),
+      Text(context.tr(page.label),
+          style: AppFonts.title(size, arabic: context.isArabic)),
       const SizedBox(height: 8),
       T(pageDescriptions[page] ?? '', style: ts(12, color: kTokens.muted)),
     ]);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
+      padding: EdgeInsets.only(bottom: responsive && w < 768 ? 16 : 28),
       child: LayoutBuilder(builder: (context, c) {
         if (c.maxWidth < 900 || actions.isEmpty) {
-          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            text,
-            if (actions.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Wrap(spacing: 8, runSpacing: 8, children: actions),
-            ],
-          ]);
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                text,
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Wrap(spacing: 8, runSpacing: 8, children: actions),
+                ],
+              ]);
         }
         return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Expanded(child: text),
           const SizedBox(width: 24),
-          Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.end, children: actions),
+          Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: actions),
         ]);
       }),
     );

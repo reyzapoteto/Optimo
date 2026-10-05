@@ -11,7 +11,8 @@ import '../theme/tokens.dart';
 import '../widgets/common.dart';
 
 Future<void> openProfilePanel(BuildContext context, Role role) =>
-    showSideDrawer(context, width: 392, builder: (_) => ProfilePanel(role: role));
+    showSideDrawer(context,
+        width: 392, builder: (_) => ProfilePanel(role: role));
 
 class ProfilePanel extends ConsumerStatefulWidget {
   const ProfilePanel({super.key, required this.role});
@@ -21,8 +22,10 @@ class ProfilePanel extends ConsumerStatefulWidget {
 }
 
 class _ProfilePanelState extends ConsumerState<ProfilePanel> {
-  late final TextEditingController name = TextEditingController(text: accounts[widget.role]!.name);
-  late final TextEditingController email = TextEditingController(text: accounts[widget.role]!.email);
+  late final TextEditingController name =
+      TextEditingController(text: accounts[widget.role]!.name);
+  late final TextEditingController email =
+      TextEditingController(text: accounts[widget.role]!.email);
   bool editing = false;
   bool alerts = true;
   bool shiftUpdates = true;
@@ -43,15 +46,18 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
     final acc = accounts[widget.role]!;
     final lang = ref.watch(langProvider);
     final executive = widget.role == Role.executive;
-    Widget toggle(String title, String body, bool v, ValueChanged<bool> on) => Padding(
+    Widget toggle(String title, String body, bool v, ValueChanged<bool> on) =>
+        Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(children: [
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                T(title, style: ts(11, weight: FontWeight.w600)),
-                const SizedBox(height: 3),
-                T(body, style: ts(9, color: t.muted2)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    T(title, style: ts(11, weight: FontWeight.w600)),
+                    const SizedBox(height: 3),
+                    T(body, style: ts(9, color: t.muted2)),
+                  ]),
             ),
             AppSwitch(value: v, onChanged: on),
           ]),
@@ -61,7 +67,8 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
         child: ListView(padding: const EdgeInsets.all(32), children: [
           Row(children: [
             const Expanded(child: Eyebrow('ACCOUNT')),
-            IconBtn(Icons.close, size: 32, onTap: () => Navigator.of(context).pop()),
+            IconBtn(Icons.close,
+                size: 32, onTap: () => Navigator.of(context).pop()),
           ]),
           const SizedBox(height: 6),
           T('My Profile', style: ts(24, weight: FontWeight.w500)),
@@ -70,12 +77,15 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
             Avatar(acc.initials, size: 48),
             const SizedBox(width: 14),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(name.text, style: ts(14, weight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text('${context.tr(widget.role.label)} · ${context.tr('Main Club')} · ${context.tr(acc.scope)}',
-                    style: ts(10, color: t.muted)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name.text, style: ts(14, weight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(
+                        '${context.tr(widget.role.label)} · ${context.tr('Main Club')} · ${context.tr(acc.scope)}',
+                        style: ts(10, color: t.muted)),
+                  ]),
             ),
           ]),
           const SizedBox(height: 28),
@@ -90,14 +100,19 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
             expand: true,
             value: lang == AppLang.ar ? 'العربية' : 'English',
             options: const ['English', 'العربية'],
-            onChanged: (v) => ref.read(langProvider.notifier).state = v == 'English' ? AppLang.en : AppLang.ar,
+            onChanged: (v) => ref.read(langProvider.notifier).state =
+                v == 'English' ? AppLang.en : AppLang.ar,
           ),
           const SizedBox(height: 28),
-          Eyebrow(executive ? 'EXECUTIVE RESPONSIBILITIES' : 'NOTIFICATION PREFERENCES'),
+          Eyebrow(executive
+              ? 'EXECUTIVE RESPONSIBILITIES'
+              : 'NOTIFICATION PREFERENCES'),
           const SizedBox(height: 6),
           if (executive) ...[
-            _ExecutiveResponsibility('Monitor club readiness and service performance'),
-            _ExecutiveResponsibility('Review quality trends, issues and SLA compliance'),
+            _ExecutiveResponsibility(
+                'Monitor club readiness and service performance'),
+            _ExecutiveResponsibility(
+                'Review quality trends, issues and SLA compliance'),
             _ExecutiveResponsibility('Export reports for management briefings'),
             const SizedBox(height: 18),
             const Eyebrow('NOTIFICATION PREFERENCES'),
@@ -105,13 +120,17 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
           ],
           toggle(
             executive ? 'Critical operational alerts' : 'Operational alerts',
-            executive ? 'High-severity issues and service risks' : 'Service, SLA and critical facility updates',
+            executive
+                ? 'High-severity issues and service risks'
+                : 'Service, SLA and critical facility updates',
             alerts,
             (v) => setState(() => alerts = v),
           ),
           toggle(
             executive ? 'Executive briefing' : 'Shift updates',
-            executive ? 'Daily performance and quality summary' : 'Assignments and schedule changes',
+            executive
+                ? 'Daily performance and quality summary'
+                : 'Assignments and schedule changes',
             shiftUpdates,
             (v) => setState(() => shiftUpdates = v),
           ),
@@ -127,10 +146,14 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
       ),
       Container(
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(border: Border(top: BorderSide(color: t.line))),
+        decoration:
+            BoxDecoration(border: Border(top: BorderSide(color: t.line))),
         child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           if (!editing && !executive)
-            AppButton(label: 'Edit Profile', kind: BtnKind.primary, onPressed: () => setState(() => editing = true))
+            AppButton(
+                label: 'Edit Profile',
+                kind: BtnKind.primary,
+                onPressed: () => setState(() => editing = true))
           else ...[
             AppButton(
               label: 'Cancel',

@@ -12,9 +12,17 @@ import 'dialogs.dart';
 enum _View { facility, device, history }
 
 class Inspector extends ConsumerStatefulWidget {
-  const Inspector({super.key, required this.facility, required this.role, required this.onClose});
+  const Inspector(
+      {super.key,
+      this.width = 304,
+      required this.facility,
+      required this.role,
+      required this.onClose});
   final Facility facility;
   final Role role;
+
+  /// Fixed desktop width; null fills the available width (mobile sheet).
+  final double? width;
   final VoidCallback onClose;
 
   @override
@@ -34,7 +42,7 @@ class _InspectorState extends ConsumerState<Inspector> {
   Widget build(BuildContext context) {
     final t = context.tk;
     return Container(
-      width: 304,
+      width: widget.width,
       decoration: BoxDecoration(
         color: t.surface2,
         borderRadius: BorderRadius.circular(12),
@@ -52,16 +60,22 @@ class _InspectorState extends ConsumerState<Inspector> {
     );
   }
 
-  Widget _kv(String k, String v, {Color? color, VoidCallback? onTap, Widget? valueWidget}) => Padding(
+  Widget _kv(String k, String v,
+          {Color? color, VoidCallback? onTap, Widget? valueWidget}) =>
+      Padding(
         padding: const EdgeInsets.symmetric(vertical: 7),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 100, child: T(k, style: ts(10, color: kTokens.muted2))),
+          SizedBox(
+              width: 100, child: T(k, style: ts(10, color: kTokens.muted2))),
           Expanded(
             child: valueWidget ??
                 Tap(
                   onTap: onTap,
                   child: Text(context.tr(v),
-                      style: ts(10, color: color ?? (onTap != null ? kTokens.yellow : kTokens.ivory), weight: FontWeight.w500)),
+                      style: ts(10,
+                          color: color ??
+                              (onTap != null ? kTokens.yellow : kTokens.ivory),
+                          weight: FontWeight.w500)),
                 ),
           ),
         ]),
@@ -91,7 +105,8 @@ class _InspectorState extends ConsumerState<Inspector> {
       const SizedBox(height: 8),
       Text(f.id, style: ts(27, weight: FontWeight.w500)),
       const SizedBox(height: 4),
-      Text('${context.tr(f.type)} · ${context.tr(f.zone)}', style: ts(11, color: t.muted)),
+      Text('${context.tr(f.type)} · ${context.tr(f.zone)}',
+          style: ts(11, color: t.muted)),
       const SizedBox(height: 10),
       StatusPill(f.status, tone: f.tone),
       if (f.detail != null) ...[
@@ -101,21 +116,37 @@ class _InspectorState extends ConsumerState<Inspector> {
       const SizedBox(height: 14),
       Divider(height: 1, color: t.lineSoft),
       const SizedBox(height: 6),
-      if (f.isBin) _kv('Fill level', fill) else _kv('Occupancy', f.occupancy ?? 'Not monitored'),
-      _kv('Device', '${f.deviceId} · ${context.tr(f.deviceStatus ?? 'Unknown')}',
+      if (f.isBin)
+        _kv('Fill level', fill)
+      else
+        _kv('Occupancy', f.occupancy ?? 'Not monitored'),
+      _kv('Device',
+          '${f.deviceId} · ${context.tr(f.deviceStatus ?? 'Unknown')}',
           onTap: () => setState(() => view = _View.device)),
       _kv('Latest Event', f.lastEvent ?? '—'),
       _kv('Assigned To', f.assigned ?? 'Unassigned'),
       if (f.taskStatus != null) ...[
         _kv('Linked Task', _taskName(f)),
         _kv('Task Status', '',
-            valueWidget: StatusPill(f.taskStatus!, tone: f.taskStatus == 'Accepted' ? Tone.ready : Tone.cleaning)),
-        _kv('Response', f.taskStatus == 'Unassigned' ? 'Response due in 00:42' : 'Accepted in 00:32',
+            valueWidget: StatusPill(f.taskStatus!,
+                tone: f.taskStatus == 'Accepted' ? Tone.ready : Tone.cleaning)),
+        _kv(
+            'Response',
+            f.taskStatus == 'Unassigned'
+                ? 'Response due in 00:42'
+                : 'Accepted in 00:32',
             color: f.taskStatus == 'Unassigned' ? t.yellow : null),
-        _kv('Completion', f.id == 'WC-02' ? 'SLA breach in 02:10' : 'Completion due in 06:30'),
+        _kv(
+            'Completion',
+            f.id == 'WC-02'
+                ? 'SLA breach in 02:10'
+                : 'Completion due in 06:30'),
       ],
       const SizedBox(height: 16),
-      if (widget.role == Role.supervisor) _supActions(context) else _dmActions(context),
+      if (widget.role == Role.supervisor)
+        _supActions(context)
+      else
+        _dmActions(context),
     ]);
   }
 
@@ -133,9 +164,16 @@ class _InspectorState extends ConsumerState<Inspector> {
         ),
         const SizedBox(height: 8),
       ],
-      AppButton(label: 'View Service History', expand: true, onPressed: () => setState(() => view = _View.history)),
+      AppButton(
+          label: 'View Service History',
+          expand: true,
+          onPressed: () => setState(() => view = _View.history)),
       const SizedBox(height: 8),
-      AppButton(label: 'View Device', kind: BtnKind.ghost, expand: true, onPressed: () => setState(() => view = _View.device)),
+      AppButton(
+          label: 'View Device',
+          kind: BtnKind.ghost,
+          expand: true,
+          onPressed: () => setState(() => view = _View.device)),
     ]);
   }
 
@@ -183,21 +221,31 @@ class _InspectorState extends ConsumerState<Inspector> {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (primary != null) ...[
-        AppButton(label: primary, kind: BtnKind.primary, expand: true, trailingIcon: primaryIcon, onPressed: onPrimary),
+        AppButton(
+            label: primary,
+            kind: BtnKind.primary,
+            expand: true,
+            trailingIcon: primaryIcon,
+            onPressed: onPrimary),
         const SizedBox(height: 8),
       ],
       AppButton(label: secondary, expand: true, onPressed: onSecondary),
       const SizedBox(height: 12),
       Container(
         padding: const EdgeInsets.only(top: 10),
-        decoration: BoxDecoration(border: Border(top: BorderSide(color: t.lineSoft))),
+        decoration:
+            BoxDecoration(border: Border(top: BorderSide(color: t.lineSoft))),
         child: Row(children: [
-          Expanded(child: T('Facility controls', style: ts(10, color: t.muted2))),
+          Expanded(
+              child: T('Facility controls', style: ts(10, color: t.muted2))),
           PopupMenuButton<String>(
             tooltip: '',
             color: t.surface3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: t.line)),
-            onSelected: (v) => openFacilityControl(context, f, close: v == 'close'),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: t.line)),
+            onSelected: (v) =>
+                openFacilityControl(context, f, close: v == 'close'),
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: closed ? 'restore' : 'close',
@@ -226,11 +274,15 @@ class _InspectorState extends ConsumerState<Inspector> {
     final f = widget.facility;
     final st = f.deviceStatus ?? 'Unknown';
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _head('ASSOCIATED DEVICE', back: () => setState(() => view = _View.facility)),
+      _head('ASSOCIATED DEVICE',
+          back: () => setState(() => view = _View.facility)),
       const SizedBox(height: 10),
       Text(f.deviceId ?? '—', style: ts(22, weight: FontWeight.w500)),
       const SizedBox(height: 8),
-      StatusPill(st, tone: st == 'Offline' ? Tone.critical : (st == 'Delayed' ? Tone.attention : Tone.ready)),
+      StatusPill(st,
+          tone: st == 'Offline'
+              ? Tone.critical
+              : (st == 'Delayed' ? Tone.attention : Tone.ready)),
       const SizedBox(height: 14),
       _kv('Device type', f.isBin ? 'Fill sensor' : 'Occupancy sensor'),
       _kv('Connected facility', f.id),
@@ -244,13 +296,17 @@ class _InspectorState extends ConsumerState<Inspector> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: t.cyan.withOpacity(0.3)),
         ),
-        child: T('Monitoring is operating normally. Device details are shown only to support service decisions.',
+        child: T(
+            'Monitoring is operating normally. Device details are shown only to support service decisions.',
             style: ts(10, color: t.cyan, height: 1.5)),
       ),
       const SizedBox(height: 14),
       SizedBox(
         width: double.infinity,
-        child: AppButton(label: 'Back to Facility', expand: true, onPressed: () => setState(() => view = _View.facility)),
+        child: AppButton(
+            label: 'Back to Facility',
+            expand: true,
+            onPressed: () => setState(() => view = _View.facility)),
       ),
     ]);
   }
@@ -258,7 +314,8 @@ class _InspectorState extends ConsumerState<Inspector> {
   Widget _history(BuildContext context) {
     final t = context.tk;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _head('SERVICE HISTORY', back: () => setState(() => view = _View.facility)),
+      _head('SERVICE HISTORY',
+          back: () => setState(() => view = _View.facility)),
       const SizedBox(height: 10),
       T('Recent service', style: ts(18, weight: FontWeight.w500)),
       const SizedBox(height: 12),
@@ -269,14 +326,17 @@ class _InspectorState extends ConsumerState<Inspector> {
       ])
         Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.lineSoft))),
+          decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: t.lineSoft))),
           child: Row(children: [
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                T(h.$2, style: ts(11, weight: FontWeight.w500)),
-                const SizedBox(height: 3),
-                T(h.$1, style: ts(9, color: t.muted2)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    T(h.$2, style: ts(11, weight: FontWeight.w500)),
+                    const SizedBox(height: 3),
+                    T(h.$1, style: ts(9, color: t.muted2)),
+                  ]),
             ),
             T(h.$3, style: ts(10, color: t.muted)),
           ]),

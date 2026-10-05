@@ -23,8 +23,12 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   @override
   Widget build(BuildContext context) {
     final t = context.tk;
-    final sla = facility == 'Waste Bins' ? '92.4%' : (zone == 'Changing Rooms' ? '94.9%' : '95.8%');
-    final resp = period == 'Last 7 days' ? '01:46' : (zone == 'Pool' ? '01:38' : '01:52');
+    final sla = facility == 'Waste Bins'
+        ? '92.4%'
+        : (zone == 'Changing Rooms' ? '94.9%' : '95.8%');
+    final resp = period == 'Last 7 days'
+        ? '01:46'
+        : (zone == 'Pool' ? '01:38' : '01:52');
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       PageIntro(page: AppPage.reports, actions: [
         AppDropdown(
@@ -45,40 +49,87 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           options: const ['All Facilities', 'Showers', 'Toilets', 'Waste Bins'],
           onChanged: (v) => setState(() => facility = v),
         ),
-        AppButton(label: 'Export report', onPressed: () => ref.read(actionsProvider).toast('Export ready')),
+        AppButton(
+            label: 'Export report',
+            onPressed: () => ref.read(actionsProvider).toast('Export ready')),
       ]),
+      if (zone != 'All Zones' ||
+          facility != 'All Facilities' ||
+          period != 'Last 30 days') ...[
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              T('Active filters', style: ts(12, color: t.muted2)),
+              for (final f in [period, zone, facility])
+                StatusPill(f, tone: Tone.muted),
+              LinkButton('Reset filters',
+                  onTap: () => setState(() {
+                        period = 'Last 30 days';
+                        zone = 'All Zones';
+                        facility = 'All Facilities';
+                      })),
+            ]),
+        const SizedBox(height: 16),
+      ],
       StatGrid(children: [
-        StatCard(label: 'SLA performance', value: sla, detail: '+2.4% vs prior period'),
-        StatCard(label: 'Average response', value: resp, detail: '8 sec inside target'),
-        const StatCard(label: 'Tasks completed', value: '684', detail: '+6.2% this period'),
-        const StatCard(label: 'Facility downtime', value: '2h 18m', detail: '-14% this period'),
+        StatCard(
+            label: 'SLA performance',
+            value: sla,
+            detail: '+2.4% vs prior period'),
+        StatCard(
+            label: 'Average response',
+            value: resp,
+            detail: '8 sec inside target'),
+        const StatCard(
+            label: 'Tasks completed',
+            value: '684',
+            detail: '+6.2% this period'),
+        const StatCard(
+            label: 'Facility downtime',
+            value: '2h 18m',
+            detail: '-14% this period'),
       ]),
       const SizedBox(height: 24),
-      SpanRow(spans: const [2, 1], children: [
+      SpanRow(spans: const [
+        2,
+        1
+      ], children: [
         ReportTrendChart(period: period, zone: zone, facilityType: facility),
         Panel(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const SectionHead(eyebrow: 'BY FACILITY TYPE', title: 'Service standard'),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const SectionHead(
+                eyebrow: 'BY FACILITY TYPE', title: 'Service standard'),
             const SizedBox(height: 20),
-            for (final b in const [('Showers', 97), ('Toilets', 95), ('Waste Bins', 92), ('Pool Facilities', 98)])
+            for (final b in const [
+              ('Showers', 97),
+              ('Toilets', 95),
+              ('Waste Bins', 92),
+              ('Pool Facilities', 98)
+            ])
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: T(b.$1, style: ts(11))),
-                    Text('${b.$2}%', style: ts(11, weight: FontWeight.w600)),
-                  ]),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: b.$2 / 100,
-                      minHeight: 6,
-                      color: t.yellow,
-                      backgroundColor: AppTokens.track,
-                    ),
-                  ),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Expanded(child: T(b.$1, style: ts(11))),
+                        Text('${b.$2}%',
+                            style: ts(11, weight: FontWeight.w600)),
+                      ]),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: b.$2 / 100,
+                          minHeight: 6,
+                          color: t.yellow,
+                          backgroundColor: AppTokens.track,
+                        ),
+                      ),
+                    ]),
               ),
           ]),
         ),

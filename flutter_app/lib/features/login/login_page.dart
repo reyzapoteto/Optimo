@@ -40,7 +40,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final id = _id.text.trim().toUpperCase();
     setState(() {
       idError = id.isEmpty ? 'Staff ID is required' : null;
-      pwError = mode == _Mode.signin && _pw.text.isEmpty ? 'Password is required' : null;
+      pwError = mode == _Mode.signin && _pw.text.isEmpty
+          ? 'Password is required'
+          : null;
       formError = null;
     });
     if (idError != null || pwError != null) return;
@@ -54,11 +56,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() => loading = false);
     // Flutter has no navigator.onLine; Staff ID "OFFLINE" simulates the offline state.
     if (id == 'OFFLINE') {
-      setState(() => formError = 'No connection. Check your network and retry.');
+      setState(
+          () => formError = 'No connection. Check your network and retry.');
       return;
     }
     if (id == 'SUP-099' || attempts >= 4) {
-      setState(() => formError = 'Your account is locked. Contact an administrator.');
+      setState(() =>
+          formError = 'Your account is locked. Contact an administrator.');
       return;
     }
     final role = roleForStaffId(id);
@@ -92,22 +96,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final t = context.tk;
     return Scaffold(
       backgroundColor: t.canvas,
-      body: LayoutBuilder(builder: (context, c) {
-        final wide = c.maxWidth >= 980;
-        final form = _formSide(context);
-        if (!wide) return form;
-        return Row(children: [
-          Expanded(flex: 2, child: form),
-          Expanded(flex: 3, child: _photo(context)),
-        ]);
-      }),
+      body: SafeArea(
+        child: LayoutBuilder(builder: (context, c) {
+          final wide = c.maxWidth >= 1100;
+          final form = _formSide(context);
+          if (!wide) return form;
+          final formWidth = (c.maxWidth * 0.4).clamp(480.0, 680.0).toDouble();
+          return Row(children: [
+            SizedBox(width: formWidth, child: form),
+            Expanded(child: _photo(context)),
+          ]);
+        }),
+      ),
     );
   }
 
   Widget _photo(BuildContext context) {
     final t = context.tk;
     return Stack(fit: StackFit.expand, children: [
-      Image.asset('assets/images/optimo-exterior.png', fit: BoxFit.cover, alignment: const Alignment(-0.76, 0)),
+      Image.asset('assets/images/optimo-exterior.png',
+          fit: BoxFit.cover, alignment: const Alignment(-0.76, 0)),
       DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -137,7 +145,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           const SizedBox(height: 12),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 460),
-            child: T('Physical excellence, translated into operational intelligence.',
+            child: T(
+                'Physical excellence, translated into operational intelligence.',
                 style: ts(24, weight: FontWeight.w400, height: 1.3)),
           ),
         ]),
@@ -147,37 +156,52 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Widget _formSide(BuildContext context) {
     final t = context.tk;
-    return Container(
-      color: t.canvas,
-      child: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(48, 40, 48, 0),
-          child: Row(children: [
-            Text('OPTIMO', style: ts(18, color: t.yellow, spacing: 5)),
-            const Spacer(),
-            const LanguageSwitch(),
-          ]),
-        ),
-        Expanded(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 380),
-                child: _body(context),
+    return LayoutBuilder(builder: (context, c) {
+      final mobile = c.maxWidth < 600;
+      final narrowMobile = c.maxWidth < 400;
+      final horizontal = narrowMobile ? 20.0 : (mobile ? 24.0 : 48.0);
+      final headerTop = mobile ? 20.0 : 40.0;
+      final bodyVertical = c.maxHeight < 700 ? 20.0 : 32.0;
+      return Container(
+        color: t.canvas,
+        child: Column(children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(horizontal, headerTop, horizontal, 0),
+            child: Row(children: [
+              Text('OPTIMO',
+                  style: ts(mobile ? 16 : 18, color: t.yellow, spacing: 5)),
+              const Spacer(),
+              LanguageSwitch(height: mobile ? 36 : 40),
+            ]),
+          ),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                    horizontal: horizontal, vertical: bodyVertical),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: _body(context, compact: mobile),
+                ),
               ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 28),
-          child: T('OPTIMO internal operations · Authorized access only', style: ts(9, color: t.muted2)),
-        ),
-      ]),
-    );
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+                horizontal, 0, horizontal, mobile ? 16 : 28),
+            child: T(
+              'OPTIMO internal operations · Authorized access only',
+              style: ts(9, color: t.muted2),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+            ),
+          ),
+        ]),
+      );
+    });
   }
 
-  Widget _body(BuildContext context) {
+  Widget _body(BuildContext context, {required bool compact}) {
     final t = context.tk;
     if (mode == _Mode.sent) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -185,15 +209,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: t.green)),
+          decoration: BoxDecoration(
+              shape: BoxShape.circle, border: Border.all(color: t.green)),
           child: Text('✓', style: ts(18, color: t.green)),
         ),
         const SizedBox(height: 20),
         const Eyebrow('RECOVERY SENT'),
         const SizedBox(height: 10),
-        T('Check your inbox', style: ts(34, weight: FontWeight.w500)),
+        T('Check your inbox',
+            style: ts(compact ? 30 : 34, weight: FontWeight.w500)),
         const SizedBox(height: 10),
-        Text('${context.tr('A recovery link has been sent to the work email for')} ${_id.text.trim().toUpperCase()}.',
+        Text(
+            '${context.tr('A recovery link has been sent to the work email for')} ${_id.text.trim().toUpperCase()}.',
             style: ts(12, color: t.muted, height: 1.5)),
         const SizedBox(height: 28),
         AppButton(
@@ -207,15 +234,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final recovery = mode == _Mode.recovery;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (recovery) ...[
-        LinkButton('← Back to sign in', color: t.muted, onTap: () => setState(() {
-              mode = _Mode.signin;
-              idError = null;
-            })),
+        Tap(
+          onTap: () => setState(() {
+            mode = _Mode.signin;
+            idError = null;
+          }),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            DirIcon(Icons.arrow_back, size: 14, color: t.muted),
+            const SizedBox(width: 6),
+            T('Back to sign in',
+                style: ts(10, color: t.muted, weight: FontWeight.w600)),
+          ]),
+        ),
         const SizedBox(height: 24),
       ],
       Eyebrow(recovery ? 'ACCOUNT RECOVERY' : 'HOSPITALITY EXCELLENCE CENTER'),
       const SizedBox(height: 12),
-      T(recovery ? 'Recover access' : 'Welcome back', style: ts(38, weight: FontWeight.w500, height: 1.1)),
+      T(recovery ? 'Recover access' : 'Welcome back',
+          style: ts(compact ? 32 : 38, weight: FontWeight.w500, height: 1.1)),
       const SizedBox(height: 10),
       T(
         recovery
@@ -262,39 +298,66 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             padding: const EdgeInsetsDirectional.only(end: 8),
             child: TextButton(
               onPressed: () => setState(() => show = !show),
-              child: T(show ? 'Hide' : 'Show', style: ts(10, color: t.muted, weight: FontWeight.w600)),
+              child: T(show ? 'Hide' : 'Show',
+                  style: ts(10, color: t.muted, weight: FontWeight.w600)),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        Row(children: [
-          Tap(
+        LayoutBuilder(builder: (context, constraints) {
+          final stackOptions =
+              constraints.maxWidth < 320 || (compact && context.isArabic);
+          final rememberOption = Tap(
             onTap: () => setState(() => remember = !remember),
-            child: Row(children: [
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: remember ? t.yellow : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: remember ? t.yellow : t.line),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: remember ? t.yellow : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: remember ? t.yellow : t.line),
+                  ),
+                  child: remember
+                      ? const Icon(Icons.check,
+                          size: 12, color: AppTokens.onYellow)
+                      : null,
                 ),
-                child: remember ? const Icon(Icons.check, size: 12, color: AppTokens.onYellow) : null,
-              ),
-              const SizedBox(width: 8),
-              T('Remember me', style: ts(11, color: t.muted)),
-            ]),
-          ),
-          const Spacer(),
-          LinkButton('Forgot Password?', size: 11, onTap: () => setState(() {
-                mode = _Mode.recovery;
-                formError = null;
-              })),
-        ]),
+                const SizedBox(width: 8),
+                T('Remember me', style: ts(11, color: t.muted)),
+              ]),
+            ),
+          );
+          final forgotPassword = LinkButton('Forgot Password?',
+              size: 11,
+              onTap: () => setState(() {
+                    mode = _Mode.recovery;
+                    formError = null;
+                  }));
+          if (stackOptions) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                rememberOption,
+                const SizedBox(height: 8),
+                forgotPassword,
+              ],
+            );
+          }
+          return Row(children: [
+            rememberOption,
+            const Spacer(),
+            forgotPassword,
+          ]);
+        }),
       ],
       const SizedBox(height: 24),
       AppButton(
-        label: recovery ? 'Send recovery link' : (loading ? 'Signing In' : 'Sign In'),
+        label: recovery
+            ? 'Send recovery link'
+            : (loading ? 'Signing In' : 'Sign In'),
         kind: BtnKind.primary,
         expand: true,
         loading: loading,
@@ -307,10 +370,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           Icon(Icons.lock_outline, size: 16, color: t.muted2),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              T('Secure operational access', style: ts(11, weight: FontWeight.w600)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              T('Secure operational access',
+                  style: ts(11, weight: FontWeight.w600)),
               const SizedBox(height: 3),
-              T('Your role is set by your account. No public registration.', style: ts(10, color: t.muted)),
+              T('Your role is set by your account. No public registration.',
+                  style: ts(10, color: t.muted)),
             ]),
           ),
         ]),
@@ -319,7 +385,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           painter: DashedRectPainter(color: t.line, radius: 10),
           child: Padding(
             padding: const EdgeInsets.all(14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 const DashedTag('Demo'),
                 const SizedBox(width: 8),
@@ -334,11 +401,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 onPressed: _enterManagerWorkspace,
               ),
               const SizedBox(height: 10),
-              Wrap(spacing: 8, children: [
+              Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final r in Role.values)
                   AppChip(
                     label: r.label,
-                    active: _id.text.trim().toUpperCase() == accounts[r]!.staffId,
+                    active:
+                        _id.text.trim().toUpperCase() == accounts[r]!.staffId,
                     onTap: () => _prefill(r),
                   ),
               ]),

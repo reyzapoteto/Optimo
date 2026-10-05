@@ -8,9 +8,11 @@ class DashboardSkeleton extends StatefulWidget {
   State<DashboardSkeleton> createState() => _DashboardSkeletonState();
 }
 
-class _DashboardSkeletonState extends State<DashboardSkeleton> with SingleTickerProviderStateMixin {
-  late final AnimationController c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+class _DashboardSkeletonState extends State<DashboardSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1200))
+    ..repeat();
 
   @override
   void dispose() {

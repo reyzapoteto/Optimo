@@ -36,7 +36,8 @@ class PermissionState extends ConsumerWidget {
             const Eyebrow('ACCESS RESTRICTED'),
             const SizedBox(height: 10),
             Text('$p ${context.tr('is managed by administrators')}',
-                textAlign: TextAlign.center, style: ts(24, weight: FontWeight.w500)),
+                textAlign: TextAlign.center,
+                style: ts(24, weight: FontWeight.w500)),
             const SizedBox(height: 12),
             Text(
               context.isArabic
@@ -49,7 +50,8 @@ class PermissionState extends ConsumerWidget {
             AppButton(
               label: 'Back to Excellence Center',
               kind: BtnKind.primary,
-              onPressed: () => ref.read(actionsProvider).navigate(AppPage.excellence),
+              onPressed: () =>
+                  ref.read(actionsProvider).navigate(AppPage.excellence),
             ),
           ]),
         ),

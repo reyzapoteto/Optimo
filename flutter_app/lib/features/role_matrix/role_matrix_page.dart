@@ -34,8 +34,14 @@ final _actions = <(String, _Cell)>[
   ('Create rework (via Fail)', _c('Yes (automatic, linked)')),
   ('Update issue status', _c('Yes')),
   ('Close / Restore facility', _c('Yes (authorized)')),
-  ('Edit SLA, thresholds, devices, users, SOPs', _c('No (administrator only)', denied: true)),
-  ('View live employee location', _c('Never (assigned zone only)', denied: true)),
+  (
+    'Edit SLA, thresholds, devices, users, SOPs',
+    _c('No (administrator only)', denied: true)
+  ),
+  (
+    'View live employee location',
+    _c('Never (assigned zone only)', denied: true)
+  ),
   ('Act outside own zones', _c('View only', confirm: true)),
   ('Command bar (Ctrl / Cmd + K)', _c('Search + quick actions', confirm: true)),
 ];
@@ -52,14 +58,26 @@ const _paradigm = [
 ];
 
 const _principles = [
-  ('Role comes from the account',
-      'Nobody picks a role at login. The Staff ID decides it. Demo chips only prefill example credentials and are not part of production.'),
-  ('Hidden, not disabled', "Navigation a role can't use isn't shown. Actions a role can't take aren't rendered."),
-  ('No dead ends', 'Deep links into a restricted area show which role can act and offer a way back.'),
-  ('View only outside own zones',
-      'Whole-club visibility with actions limited to own zones, marked with a quiet label. To confirm.'),
-  ('Supervisor principles',
-      'Action over information · ownership visible · time is spatial · every drag has a button · tables are secondary · no configuration · one job at a time.'),
+  (
+    'Role comes from the account',
+    'Nobody picks a role at login. The Staff ID decides it. Demo chips only prefill example credentials and are not part of production.'
+  ),
+  (
+    'Hidden, not disabled',
+    "Navigation a role can't use isn't shown. Actions a role can't take aren't rendered."
+  ),
+  (
+    'No dead ends',
+    'Deep links into a restricted area show which role can act and offer a way back.'
+  ),
+  (
+    'View only outside own zones',
+    'Whole-club visibility with actions limited to own zones, marked with a quiet label. To confirm.'
+  ),
+  (
+    'Supervisor principles',
+    'Action over information · ownership visible · time is spatial · every drag has a button · tables are secondary · no configuration · one job at a time.'
+  ),
 ];
 
 class RoleMatrixPage extends ConsumerWidget {
@@ -70,21 +88,28 @@ class RoleMatrixPage extends ConsumerWidget {
     final t = context.tk;
     final role = ref.watch(authProvider) ?? Role.dutyManager;
 
-    Widget cell(_Cell c) => Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          T(c.text, style: ts(11, color: c.denied ? t.muted2 : t.ivory)),
-          if (c.confirm) const DashedTag('To confirm'),
-        ]);
+    Widget cell(_Cell c) => Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              T(c.text, style: ts(11, color: c.denied ? t.muted2 : t.ivory)),
+              if (c.confirm) const DashedTag('To confirm'),
+            ]);
 
     Widget table(List<String> headers, List<List<Widget>> rows) {
       final hs = ts(9, color: t.muted2, weight: FontWeight.w700, spacing: 1);
       Widget line(List<Widget> cells) => Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.lineSoft))),
+            decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: t.lineSoft))),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               for (var i = 0; i < cells.length; i++)
                 Expanded(
                   flex: i == 0 ? 3 : (cells.length == 2 ? 2 : 2),
-                  child: Padding(padding: const EdgeInsetsDirectional.only(end: 12), child: cells[i]),
+                  child: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 12),
+                      child: cells[i]),
                 ),
             ]),
           );
@@ -99,19 +124,28 @@ class RoleMatrixPage extends ConsumerWidget {
         SectionHead(
           eyebrow: 'ROLE PARADIGMS',
           title: 'Same language, different workspace',
-          trailing: StatusPill('${context.tr('Signed in as')} ${context.tr(role.label)}',
-              tone: Tone.ready, translate: false),
+          trailing: StatusPill(
+              '${context.tr('Signed in as')} ${context.tr(role.label)}',
+              tone: Tone.ready,
+              translate: false),
         ),
         const SizedBox(height: 20),
         Row(children: [
           const Expanded(flex: 2, child: SizedBox()),
-          Expanded(flex: 3, child: T('Duty Manager / Admin', style: ts(11, weight: FontWeight.w700))),
-          Expanded(flex: 3, child: T('Supervisor', style: ts(11, weight: FontWeight.w700, color: t.yellow))),
+          Expanded(
+              flex: 3,
+              child: T('Duty Manager / Admin',
+                  style: ts(11, weight: FontWeight.w700))),
+          Expanded(
+              flex: 3,
+              child: T('Supervisor',
+                  style: ts(11, weight: FontWeight.w700, color: t.yellow))),
         ]),
         for (final p in _paradigm)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 11),
-            decoration: BoxDecoration(border: Border(top: BorderSide(color: t.lineSoft))),
+            decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: t.lineSoft))),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(flex: 2, child: T(p.$1, style: ts(10, color: t.muted2))),
               Expanded(flex: 3, child: T(p.$2, style: ts(11, color: t.muted))),
@@ -125,8 +159,17 @@ class RoleMatrixPage extends ConsumerWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const SectionHead(eyebrow: 'NAVIGATION ACCESS', title: 'Menu by role'),
         const SizedBox(height: 16),
-        table(const ['MENU', 'DUTY MANAGER', 'SUPERVISOR'], [
-          for (final n in _nav) [T(n.$1, style: ts(11)), T(n.$2, style: ts(11, color: t.muted)), cell(n.$3)],
+        table(const [
+          'MENU',
+          'DUTY MANAGER',
+          'SUPERVISOR'
+        ], [
+          for (final n in _nav)
+            [
+              T(n.$1, style: ts(11)),
+              T(n.$2, style: ts(11, color: t.muted)),
+              cell(n.$3)
+            ],
         ]),
       ]),
     );
@@ -135,7 +178,10 @@ class RoleMatrixPage extends ConsumerWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const SectionHead(eyebrow: 'KEY ACTIONS', title: 'Supervisor actions'),
         const SizedBox(height: 16),
-        table(const ['ACTION', 'SUPERVISOR'], [
+        table(const [
+          'ACTION',
+          'SUPERVISOR'
+        ], [
           for (final a in _actions) [T(a.$1, style: ts(11)), cell(a.$2)],
         ]),
       ]),
@@ -160,11 +206,13 @@ class RoleMatrixPage extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: t.line),
                 ),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  T(p.$1, style: ts(12, weight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  T(p.$2, style: ts(10, color: t.muted, height: 1.5)),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      T(p.$1, style: ts(12, weight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      T(p.$2, style: ts(10, color: t.muted, height: 1.5)),
+                    ]),
               ),
             ),
         ]);

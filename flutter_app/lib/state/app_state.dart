@@ -11,7 +11,8 @@ import '../data/models.dart';
 import '../l10n/tr.dart';
 
 /// Overridden in main() with the loaded instance.
-final prefsProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError());
+final prefsProvider =
+    Provider<SharedPreferences>((ref) => throw UnimplementedError());
 
 /// Router instance, assigned in app.dart so actions can navigate.
 late GoRouter appRouter;
@@ -39,7 +40,8 @@ class OwnershipNotifier extends Notifier<Map<String, Ownership>> {
     if (raw != null) {
       try {
         final decoded = jsonDecode(raw) as Map<String, dynamic>;
-        return decoded.map((k, v) => MapEntry(k, Ownership.fromJson(v as Map<String, dynamic>)));
+        return decoded.map((k, v) =>
+            MapEntry(k, Ownership.fromJson(v as Map<String, dynamic>)));
       } catch (_) {}
     }
     return Map.of(initialOwnership);
@@ -62,7 +64,9 @@ class OwnershipNotifier extends Notifier<Map<String, Ownership>> {
   }
 }
 
-final ownershipProvider = NotifierProvider<OwnershipNotifier, Map<String, Ownership>>(OwnershipNotifier.new);
+final ownershipProvider =
+    NotifierProvider<OwnershipNotifier, Map<String, Ownership>>(
+        OwnershipNotifier.new);
 
 final resolvedFacilitiesProvider = Provider<List<Facility>>((ref) {
   final own = ref.watch(ownershipProvider);

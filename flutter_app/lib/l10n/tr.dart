@@ -11,7 +11,8 @@ class LangScope extends InheritedWidget {
   final AppLang lang;
 
   static AppLang of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<LangScope>()?.lang ?? AppLang.en;
+      context.dependOnInheritedWidgetOfExactType<LangScope>()?.lang ??
+      AppLang.en;
 
   @override
   bool updateShouldNotify(LangScope oldWidget) => oldWidget.lang != lang;

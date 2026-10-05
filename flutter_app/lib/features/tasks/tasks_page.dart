@@ -46,7 +46,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
   List<TaskRow> get rows {
     final q = search.text.trim().toLowerCase();
     final zoneMap = {
-      'Changing Room': ['Changing Area A', 'Changing Room B', 'Shower Area', 'Toilet Area', 'Vanity Area'],
+      'Changing Room': [
+        'Changing Area A',
+        'Changing Room B',
+        'Shower Area',
+        'Toilet Area',
+        'Vanity Area'
+      ],
       'Functional Training': ['Personal Training'],
       'Pool': ['Pool'],
       'Lounge': ['Lounge'],
@@ -54,9 +60,13 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     final list = taskRows.where((r) {
       if (status != 'All' && r.status != status) return false;
       if (priority != 'All Priorities' && r.priority != priority) return false;
-      if (zone != 'All Zones' && !(zoneMap[zone] ?? const <String>[]).contains(r.location)) return false;
+      if (zone != 'All Zones' &&
+          !(zoneMap[zone] ?? const <String>[]).contains(r.location))
+        return false;
       if (q.isNotEmpty &&
-          !('${r.id} ${r.facility} ${r.assignee} ${r.location} ${r.type}').toLowerCase().contains(q)) {
+          !('${r.id} ${r.facility} ${r.assignee} ${r.location} ${r.type}')
+              .toLowerCase()
+              .contains(q)) {
         return false;
       }
       return true;
@@ -72,58 +82,125 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     final pages = (list.length / 5).ceil().clamp(1, 99);
     final pi = pageIndex.clamp(0, pages - 1);
     final slice = list.skip(pi * 5).take(5).toList();
-    const statuses = ['All', 'New', 'Accepted', 'In Progress', 'Blocked', 'Completed', 'Canceled'];
+    const statuses = [
+      'All',
+      'New',
+      'Accepted',
+      'In Progress',
+      'Blocked',
+      'Completed',
+      'Canceled'
+    ];
+    // Supervisor on narrow screens: full-width search and record cards instead of a squeezed table.
+    final screenW = MediaQuery.sizeOf(context).width;
+    final compact = ref.watch(authProvider) != Role.executive && screenW < 768;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const PageIntro(page: AppPage.tasks),
       const StatGrid(children: [
-        StatCard(label: 'Open tasks', value: '6', detail: '2 need assignment', tone: Tone.attention),
-        StatCard(label: 'Within response SLA', value: '96%', detail: '24 of 25 today'),
-        StatCard(label: 'Avg. completion', value: '08:42', detail: '1m 18s faster'),
-        StatCard(label: 'Blocked', value: '1', detail: 'Awaiting maintenance', tone: Tone.critical),
+        StatCard(
+            label: 'Open tasks',
+            value: '6',
+            detail: '2 need assignment',
+            tone: Tone.attention),
+        StatCard(
+            label: 'Within response SLA',
+            value: '96%',
+            detail: '24 of 25 today'),
+        StatCard(
+            label: 'Avg. completion', value: '08:42', detail: '1m 18s faster'),
+        StatCard(
+            label: 'Blocked',
+            value: '1',
+            detail: 'Awaiting maintenance',
+            tone: Tone.critical),
       ]),
       const SizedBox(height: 24),
-      Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        SearchField(
-          placeholder: 'Search facilities, tasks or people',
-          controller: search,
-          onChanged: (_) => setState(() => pageIndex = 0),
-        ),
-        AppButton(label: 'Filters', icon: Icons.filter_list, onPressed: () => setState(() => filters = !filters)),
-        AppButton(
-          label: 'Create Task',
-          icon: Icons.add,
-          kind: BtnKind.primary,
-          onPressed: () => showSideDrawer(context, width: 440, builder: (_) => const TaskForm()),
-        ),
-      ]),
+      Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SearchField(
+              placeholder: 'Search facilities, tasks or people',
+              width: compact ? screenW - 32 : 320,
+              controller: search,
+              onChanged: (_) => setState(() => pageIndex = 0),
+            ),
+            AppButton(
+                label: 'Filters',
+                icon: Icons.filter_list,
+                onPressed: () => setState(() => filters = !filters)),
+            AppButton(
+              label: 'Create Task',
+              icon: Icons.add,
+              kind: BtnKind.primary,
+              onPressed: () => showSideDrawer(context,
+                  width: 440, builder: (_) => const TaskForm()),
+            ),
+          ]),
       if (filters) ...[
         const SizedBox(height: 12),
         Panel(
           padding: const EdgeInsets.all(16),
-          child: Wrap(spacing: 12, runSpacing: 12, crossAxisAlignment: WrapCrossAlignment.end, children: [
-            AppDropdown(
-              label: 'ZONE',
-              value: zone,
-              options: const ['All Zones', 'Changing Room', 'Functional Training', 'Pool', 'Lounge'],
-              onChanged: (v) => setState(() => zone = v),
-            ),
-            AppDropdown(
-              label: 'PRIORITY',
-              value: priority,
-              options: const ['All Priorities', 'Urgent', 'High', 'Medium', 'Low'],
-              onChanged: (v) => setState(() => priority = v),
-            ),
-            AppButton(
-              label: 'Clear Filters',
-              kind: BtnKind.ghost,
-              onPressed: () => setState(() {
-                zone = 'All Zones';
-                priority = 'All Priorities';
-              }),
-            ),
-          ]),
+          child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: [
+                AppDropdown(
+                  label: 'ZONE',
+                  value: zone,
+                  options: const [
+                    'All Zones',
+                    'Changing Room',
+                    'Functional Training',
+                    'Pool',
+                    'Lounge'
+                  ],
+                  onChanged: (v) => setState(() => zone = v),
+                ),
+                AppDropdown(
+                  label: 'PRIORITY',
+                  value: priority,
+                  options: const [
+                    'All Priorities',
+                    'Urgent',
+                    'High',
+                    'Medium',
+                    'Low'
+                  ],
+                  onChanged: (v) => setState(() => priority = v),
+                ),
+                AppButton(
+                  label: 'Clear Filters',
+                  kind: BtnKind.ghost,
+                  onPressed: () => setState(() {
+                    zone = 'All Zones';
+                    priority = 'All Priorities';
+                  }),
+                ),
+              ]),
         ),
+      ],
+      const SizedBox(height: 16),
+      if (filters || zone != 'All Zones' || priority != 'All Priorities') ...[
+        const SizedBox(height: 12),
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (zone != 'All Zones') StatusPill(zone, tone: Tone.cleaning),
+              if (priority != 'All Priorities')
+                StatusPill(priority, tone: Tone.attention),
+              if (zone != 'All Zones' || priority != 'All Priorities')
+                LinkButton('Reset filters',
+                    onTap: () => setState(() {
+                          zone = 'All Zones';
+                          priority = 'All Priorities';
+                        })),
+            ]),
       ],
       const SizedBox(height: 16),
       Wrap(spacing: 8, runSpacing: 8, children: [
@@ -131,7 +208,9 @@ class _TasksPageState extends ConsumerState<TasksPage> {
           AppChip(
             label: s,
             active: status == s,
-            count: s == 'All' ? taskRows.length : taskRows.where((r) => r.status == s).length,
+            count: s == 'All'
+                ? taskRows.length
+                : taskRows.where((r) => r.status == s).length,
             onTap: () => setState(() {
               status = s;
               pageIndex = 0;
@@ -152,40 +231,111 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 }),
               )
             : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                LayoutBuilder(builder: (context, c) {
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: c.maxWidth < 1040 ? 1040 : c.maxWidth,
-                      child: Column(children: [
-                        _header(context),
-                        for (final r in slice) _row(context, r),
-                      ]),
-                    ),
-                  );
-                }),
+                if (compact)
+                  for (final r in slice) _card(context, r)
+                else
+                  LayoutBuilder(builder: (context, c) {
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: c.maxWidth < 1040 ? 1040 : c.maxWidth,
+                        child: Column(children: [
+                          _header(context),
+                          for (final r in slice) _row(context, r),
+                        ]),
+                      ),
+                    );
+                  }),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Row(children: [
-                    Text(
-                        '${context.tr('Showing')} ${pi * 5 + 1}–${pi * 5 + slice.length} ${context.tr('of')} ${list.length} ${context.tr('tasks')}',
-                        style: ts(10, color: t.muted)),
-                    const Spacer(),
-                    AppButton(label: 'Previous', compact: true, onPressed: pi > 0 ? () => setState(() => pageIndex = pi - 1) : null),
-                    const SizedBox(width: 8),
-                    AppButton(
-                        label: 'Next', compact: true, onPressed: pi < pages - 1 ? () => setState(() => pageIndex = pi + 1) : null),
-                  ]),
+                  child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                            '${context.tr('Showing')} ${pi * 5 + 1}–${pi * 5 + slice.length} ${context.tr('of')} ${list.length} ${context.tr('tasks')}',
+                            style: ts(12, color: t.muted)),
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          AppButton(
+                              label: 'Previous',
+                              compact: !compact,
+                              onPressed: pi > 0
+                                  ? () => setState(() => pageIndex = pi - 1)
+                                  : null),
+                          const SizedBox(width: 8),
+                          AppButton(
+                              label: 'Next',
+                              compact: !compact,
+                              onPressed: pi < pages - 1
+                                  ? () => setState(() => pageIndex = pi + 1)
+                                  : null),
+                        ]),
+                      ]),
                 ),
               ]),
       ),
     ]);
   }
 
+  /// Mobile record card: keeps every table field visible, grouped by meaning.
+  Widget _card(BuildContext context, TaskRow r) {
+    final t = context.tk;
+    final pTone = r.priority == 'Urgent'
+        ? Tone.critical
+        : (r.priority == 'High' ? Tone.attention : Tone.muted);
+    final sTone = r.status == 'Completed'
+        ? Tone.ready
+        : (r.status == 'New' ? Tone.attention : Tone.cleaning);
+    Widget kv(String k, String v, {Color? color}) => Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(width: 104, child: T(k, style: ts(12, color: t.muted2))),
+            Expanded(
+                child:
+                    T(v, style: ts(14, color: color ?? t.ivory, height: 1.5))),
+          ]),
+        );
+    return Semantics(
+      button: true,
+      child: Tap(
+        onTap: () => openDetail(context, 'Task Detail', r.id),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: t.lineSoft))),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Text(r.id, style: ts(14, weight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              Text(r.facility, style: ts(14, color: t.muted)),
+              const Spacer(),
+              DirIcon(Icons.chevron_right, size: 18, color: t.muted2),
+            ]),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              StatusPill(r.status, tone: sTone),
+              StatusPill(r.priority, tone: pTone)
+            ]),
+            kv('Location', r.location),
+            kv('Type', r.type),
+            kv('Assignee', r.assignee),
+            kv('Source', r.source),
+            kv('Response SLA', r.sla,
+                color: r.sla == 'Breached' ? t.coral : null),
+          ]),
+        ),
+      ),
+    );
+  }
+
   static const _flex = [12, 8, 13, 13, 9, 12, 8, 10, 10, 4];
 
   Widget _cells(List<Widget> cells) => Row(children: [
-        for (var i = 0; i < cells.length; i++) Expanded(flex: _flex[i], child: cells[i]),
+        for (var i = 0; i < cells.length; i++)
+          Expanded(flex: _flex[i], child: cells[i]),
       ]);
 
   Widget _header(BuildContext context) {
@@ -194,11 +344,16 @@ class _TasksPageState extends ConsumerState<TasksPage> {
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.line))),
+      decoration:
+          BoxDecoration(border: Border(bottom: BorderSide(color: t.line))),
       child: _cells([
         Tap(
           onTap: () => setState(() => asc = !asc),
-          child: Row(children: [T('Task ID', style: h), const SizedBox(width: 4), Text(asc ? '↑' : '↓', style: h)]),
+          child: Row(children: [
+            T('Task ID', style: h),
+            const SizedBox(width: 4),
+            Text(asc ? '↑' : '↓', style: h)
+          ]),
         ),
         T('Facility', style: h),
         T('Location', style: h),
@@ -215,24 +370,34 @@ class _TasksPageState extends ConsumerState<TasksPage> {
 
   Widget _row(BuildContext context, TaskRow r) {
     final t = context.tk;
-    final pTone = r.priority == 'Urgent' ? Tone.critical : (r.priority == 'High' ? Tone.attention : Tone.muted);
-    final sTone = r.status == 'Completed' ? Tone.ready : (r.status == 'New' ? Tone.attention : Tone.cleaning);
+    final pTone = r.priority == 'Urgent'
+        ? Tone.critical
+        : (r.priority == 'High' ? Tone.attention : Tone.muted);
+    final sTone = r.status == 'Completed'
+        ? Tone.ready
+        : (r.status == 'New' ? Tone.attention : Tone.cleaning);
     return Tap(
       onTap: () => openDetail(context, 'Task Detail', r.id),
       child: Container(
         height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.lineSoft))),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: t.lineSoft))),
         child: _cells([
           Text(r.id, style: ts(11, weight: FontWeight.w600)),
           Text(r.facility, style: ts(11)),
           T(r.location, style: ts(11, color: t.muted), maxLines: 1),
           T(r.type, style: ts(11), maxLines: 1),
-          Align(alignment: AlignmentDirectional.centerStart, child: StatusPill(r.priority, tone: pTone)),
+          Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: StatusPill(r.priority, tone: pTone)),
           T(r.assignee, style: ts(11), maxLines: 1),
           T(r.source, style: ts(11, color: t.muted)),
-          Align(alignment: AlignmentDirectional.centerStart, child: StatusPill(r.status, tone: sTone)),
-          T(r.sla, style: ts(11, color: r.sla == 'Breached' ? t.coral : t.ivory)),
+          Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: StatusPill(r.status, tone: sTone)),
+          T(r.sla,
+              style: ts(11, color: r.sla == 'Breached' ? t.coral : t.ivory)),
           DirIcon(Icons.chevron_right, size: 16, color: t.muted2),
         ]),
       ),
@@ -273,9 +438,13 @@ class _TaskFormState extends ConsumerState<TaskForm> {
           const SizedBox(height: 12),
           T('Task created', style: ts(22, weight: FontWeight.w500)),
           const SizedBox(height: 8),
-          T('The task is ready for assignment and SLA tracking.', style: ts(11, color: t.muted), textAlign: TextAlign.center),
+          T('The task is ready for assignment and SLA tracking.',
+              style: ts(11, color: t.muted), textAlign: TextAlign.center),
           const SizedBox(height: 20),
-          AppButton(label: 'View Task', kind: BtnKind.primary, onPressed: () => Navigator.of(context).pop()),
+          AppButton(
+              label: 'View Task',
+              kind: BtnKind.primary,
+              onPressed: () => Navigator.of(context).pop()),
         ]),
       );
     }
@@ -284,19 +453,26 @@ class _TaskFormState extends ConsumerState<TaskForm> {
         child: ListView(padding: const EdgeInsets.all(32), children: [
           Row(children: [
             const Expanded(child: Eyebrow('MANUAL TASK')),
-            IconBtn(Icons.close, size: 32, onTap: () => Navigator.of(context).pop()),
+            IconBtn(Icons.close,
+                size: 32, onTap: () => Navigator.of(context).pop()),
           ]),
           const SizedBox(height: 6),
           T('Create operational task', style: ts(22, weight: FontWeight.w500)),
           const SizedBox(height: 24),
           const FieldLabel('Facility *'),
-          AppTextField(controller: facility, placeholder: 'e.g. SH-04', error: error),
+          AppTextField(
+              controller: facility, placeholder: 'e.g. SH-04', error: error),
           const SizedBox(height: 16),
           const FieldLabel('Task Type *'),
           AppDropdown(
               expand: true,
               value: type,
-              options: const ['Cleaning', 'Inspection', 'Replenishment', 'Maintenance'],
+              options: const [
+                'Cleaning',
+                'Inspection',
+                'Replenishment',
+                'Maintenance'
+              ],
               onChanged: (v) => setState(() => type = v)),
           const SizedBox(height: 16),
           const FieldLabel('Priority'),
@@ -310,18 +486,29 @@ class _TaskFormState extends ConsumerState<TaskForm> {
           AppDropdown(
               expand: true,
               value: assignee,
-              options: const ['Select employee', 'Ahmed Hassan', 'Sara Omar', 'M. Khalid', 'N. Faisal'],
+              options: const [
+                'Select employee',
+                'Ahmed Hassan',
+                'Sara Omar',
+                'M. Khalid',
+                'N. Faisal'
+              ],
               onChanged: (v) => setState(() => assignee = v)),
           const SizedBox(height: 16),
           const FieldLabel('Description'),
-          AppTextField(controller: desc, placeholder: 'Add concise operational context', maxLines: 4),
+          AppTextField(
+              controller: desc,
+              placeholder: 'Add concise operational context',
+              maxLines: 4),
         ]),
       ),
       Container(
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(border: Border(top: BorderSide(color: t.line))),
+        decoration:
+            BoxDecoration(border: Border(top: BorderSide(color: t.line))),
         child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          AppButton(label: 'Cancel', onPressed: () => Navigator.of(context).pop()),
+          AppButton(
+              label: 'Cancel', onPressed: () => Navigator.of(context).pop()),
           const SizedBox(width: 8),
           AppButton(
             label: 'Create Task',

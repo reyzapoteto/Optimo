@@ -11,7 +11,8 @@ const Map<String, String> arabicCopy = {
   "Reports": "التقارير",
   "Settings": "الإعدادات",
   "Hospitality Excellence Center": "مركز التميز للضيافة",
-  "Live facility operations across the club.": "عمليات المرافق المباشرة في جميع أنحاء النادي.",
+  "Live facility operations across the club.":
+      "عمليات المرافق المباشرة في جميع أنحاء النادي.",
   "LIVE OPERATIONS": "عمليات مباشرة",
   "UPDATED NOW": "تم التحديث الآن",
   "Main Club": "النادي الرئيسي",
@@ -43,7 +44,8 @@ const Map<String, String> arabicCopy = {
   "In Progress": "قيد التنفيذ",
   "Blocked": "متوقفة",
   "Live": "مباشر",
-  "Select a facility to investigate service state.": "اختر مرفقاً لعرض حالة الخدمة.",
+  "Select a facility to investigate service state.":
+      "اختر مرفقاً لعرض حالة الخدمة.",
   "SPATIAL STATUS": "الحالة المكانية",
   "LEVEL": "الطابق",
   "FACILITY": "المرفق",
@@ -72,7 +74,8 @@ const Map<String, String> arabicCopy = {
   "Open Task": "فتح المهمة",
   "View Service History": "عرض سجل الخدمة",
   "DECISION QUEUE": "قائمة القرارات",
-  "Prioritized by urgency and service impact.": "مرتبة حسب الاستعجال وتأثير الخدمة.",
+  "Prioritized by urgency and service impact.":
+      "مرتبة حسب الاستعجال وتأثير الخدمة.",
   "View all exceptions": "عرض جميع الحالات",
   "Average response": "متوسط الاستجابة",
   "12% faster than target": "أسرع من الهدف بنسبة 12%",
@@ -117,11 +120,13 @@ const Map<String, String> arabicCopy = {
   "Sign In": "تسجيل الدخول",
   "Signing In": "جارٍ تسجيل الدخول",
   "Recover access": "استعادة الوصول",
-  "Enter your work email and we’ll send a secure recovery link.": "أدخل بريد العمل وسنرسل لك رابط استعادة آمن.",
+  "Enter your work email and we’ll send a secure recovery link.":
+      "أدخل بريد العمل وسنرسل لك رابط استعادة آمن.",
   "Send recovery link": "إرسال رابط الاستعادة",
   "Back to sign in": "العودة لتسجيل الدخول",
   "Check your inbox": "تحقق من بريدك",
-  "A recovery link has been sent to your work email.": "تم إرسال رابط الاستعادة إلى بريد العمل.",
+  "A recovery link has been sent to your work email.":
+      "تم إرسال رابط الاستعادة إلى بريد العمل.",
   "Notifications": "الإشعارات",
   "Mark all as read": "تحديد الكل كمقروء",
   "View all notifications": "عرض جميع الإشعارات",
@@ -193,9 +198,11 @@ const Map<String, String> arabicCopy = {
   "Protected for authorized OPTIMO personnel.": "مخصص لموظفي أوبتيمو المخولين.",
   "ACCOUNT RECOVERY": "استعادة الحساب",
   "RECOVERY SENT": "تم إرسال رابط الاستعادة",
-  "OPTIMO internal operations · Authorized access only": "نظام أوبتيمو التشغيلي · للمخولين فقط",
+  "OPTIMO internal operations · Authorized access only":
+      "نظام أوبتيمو التشغيلي · للمخولين فقط",
   "RIYADH · MAIN CLUB": "الرياض · النادي الرئيسي",
-  "Physical excellence, translated into operational intelligence.": "تميّز المكان، مدعوم بذكاء تشغيلي.",
+  "Physical excellence, translated into operational intelligence.":
+      "تميّز المكان، مدعوم بذكاء تشغيلي.",
   "Name": "الاسم",
   "ACCOUNT": "الحساب",
   "Main Club · Riyadh": "النادي الرئيسي · الرياض",
@@ -230,13 +237,20 @@ const Map<String, String> arabicCopy = {
   "Service requested": "تم طلب الخدمة",
   "Reached 82% fill": "بلغت نسبة الامتلاء 82%",
   "Cleaning accepted": "تم قبول مهمة التنظيف",
-  "Assign, monitor and resolve operational service work.": "إدارة مهام الخدمة ومتابعتها حتى الإنجاز.",
-  "Plan recurring and routine hospitality operations.": "تخطيط الأعمال التشغيلية الدورية للضيافة.",
-  "Balance on-shift capacity and assigned operational work.": "إدارة طاقة فريق المناوبة وتوزيع المهام.",
-  "Maintain club standards through inspections and rework.": "الحفاظ على معايير النادي عبر الفحوصات والإجراءات التصحيحية.",
-  "Track facility faults and operational blockers to resolution.": "متابعة أعطال المرافق والعوائق التشغيلية حتى معالجتها.",
-  "Review service performance and recurring operational patterns.": "مراجعة أداء الخدمة والأنماط التشغيلية المتكررة.",
-  "Configure locations, devices, service rules and access.": "إدارة المواقع والأجهزة وقواعد الخدمة والصلاحيات.",
+  "Assign, monitor and resolve operational service work.":
+      "إدارة مهام الخدمة ومتابعتها حتى الإنجاز.",
+  "Plan recurring and routine hospitality operations.":
+      "تخطيط الأعمال التشغيلية الدورية للضيافة.",
+  "Balance on-shift capacity and assigned operational work.":
+      "إدارة طاقة فريق المناوبة وتوزيع المهام.",
+  "Maintain club standards through inspections and rework.":
+      "الحفاظ على معايير النادي عبر الفحوصات والإجراءات التصحيحية.",
+  "Track facility faults and operational blockers to resolution.":
+      "متابعة أعطال المرافق والعوائق التشغيلية حتى معالجتها.",
+  "Review service performance and recurring operational patterns.":
+      "مراجعة أداء الخدمة والأنماط التشغيلية المتكررة.",
+  "Configure locations, devices, service rules and access.":
+      "إدارة المواقع والأجهزة وقواعد الخدمة والصلاحيات.",
   "Open Tasks": "المهام المفتوحة",
   "All Priorities": "جميع الأولويات",
   "All Statuses": "جميع الحالات",
@@ -307,7 +321,8 @@ const Map<String, String> arabicCopy = {
   "Ground Floor": "الدور الأرضي",
   "Changing Area A": "منطقة تبديل الملابس أ",
   "Washroom / Changing Area": "دورات المياه / تبديل الملابس",
-  "Live operations for the Washroom / Changing Area.": "العمليات المباشرة لمنطقة دورات المياه وتبديل الملابس.",
+  "Live operations for the Washroom / Changing Area.":
+      "العمليات المباشرة لمنطقة دورات المياه وتبديل الملابس.",
   "WASHROOM STANDARD": "معيار منطقة دورات المياه",
   "WASHROOM SERVICE": "خدمة منطقة دورات المياه",
   "WASHROOM · RIGHT NOW": "منطقة دورات المياه · الآن",

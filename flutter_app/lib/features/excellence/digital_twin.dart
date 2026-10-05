@@ -17,12 +17,22 @@ const twinModes = ['Service Status', 'Occupancy', 'Bin Levels', 'Devices'];
     case 'Occupancy':
       final o = f.occupancy;
       if (o == null) return ('Not monitored', Tone.muted);
-      return (o, o == 'Occupied' ? Tone.attention : (o == 'Unknown' ? Tone.muted : Tone.ready));
+      return (
+        o,
+        o == 'Occupied'
+            ? Tone.attention
+            : (o == 'Unknown' ? Tone.muted : Tone.ready)
+      );
     case 'Bin Levels':
       return f.isBin ? (f.status, f.tone) : ('Not applicable', Tone.muted);
     case 'Devices':
       final d = f.deviceStatus ?? 'Unknown';
-      return (d, d == 'Offline' ? Tone.critical : (d == 'Delayed' ? Tone.attention : Tone.ready));
+      return (
+        d,
+        d == 'Offline'
+            ? Tone.critical
+            : (d == 'Delayed' ? Tone.attention : Tone.ready)
+      );
     default:
       return (f.status, f.tone);
   }
@@ -94,7 +104,10 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
   bool _faded(Facility f) {
     if (mode == 'Bin Levels' && !f.isBin) return true;
     if (mode == 'Occupancy' && f.isBin) return true;
-    if (widget.attentionFilter && !(f.tone == Tone.attention || f.tone == Tone.critical || f.tone == Tone.cleaning)) {
+    if (widget.attentionFilter &&
+        !(f.tone == Tone.attention ||
+            f.tone == Tone.critical ||
+            f.tone == Tone.cleaning)) {
       return true;
     }
     if (widget.selectedId != null && widget.selectedId != f.id) return true;
@@ -109,8 +122,34 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
     for (final f in list) {
       if (f.id == widget.selectedId) selected = f;
     }
-    final relevant = list.where((f) => !_faded(f) || f.id == widget.selectedId).length;
+    final relevant =
+        list.where((f) => !_faded(f) || f.id == widget.selectedId).length;
 
+    // Phones: stacked header, wrapping toolbars, shorter map, 44px controls,
+    // and the inspector as a full-width overlay sheet.
+    final mobile = MediaQuery.sizeOf(context).width < 768;
+    final hp = mobile ? 16.0 : 24.0;
+    final ctl = mobile ? 44.0 : 32.0;
+    final heading =
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Eyebrow('LIVE SPATIAL OPERATIONS'),
+      const SizedBox(height: 6),
+      Wrap(
+          spacing: 10,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            T('OPTIMO Live Digital Twin',
+                style: ts(18, weight: FontWeight.w500)),
+            const DashedTag('Illustrative demo layout'),
+          ]),
+      const SizedBox(height: 6),
+      T(
+          mobile
+              ? 'Drag to orbit · Pinch or use + / − to zoom · Tap a facility to investigate.'
+              : 'Drag to orbit · Shift-drag to pan · Select a facility to investigate.',
+          style: ts(mobile ? 12 : 10, color: t.muted2, height: 1.5)),
+    ]);
     return Container(
       decoration: BoxDecoration(
         color: t.surface,
@@ -119,88 +158,137 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Eyebrow('LIVE SPATIAL OPERATIONS'),
-                const SizedBox(height: 6),
-                Wrap(spacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                  T('OPTIMO Live Digital Twin', style: ts(18, weight: FontWeight.w500)),
-                  const DashedTag('Illustrative demo layout'),
+        if (mobile)
+          Padding(
+            padding: EdgeInsets.fromLTRB(hp, 16, hp, 16),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  heading,
+                  const SizedBox(height: 12),
+                  Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: _LocateField(
+                          facilities: list, onPick: (id) => _focus(id))),
                 ]),
-                const SizedBox(height: 6),
-                T('Drag to orbit · Shift-drag to pan · Select a facility to investigate.',
-                    style: ts(10, color: t.muted2)),
-              ]),
-            ),
-            _LocateField(facilities: list, onPick: (id) => _focus(id)),
-          ]),
-        ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Eyebrow('LIVE SPATIAL OPERATIONS'),
+                      const SizedBox(height: 6),
+                      Wrap(
+                          spacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            T('OPTIMO Live Digital Twin',
+                                style: ts(18, weight: FontWeight.w500)),
+                            const DashedTag('Illustrative demo layout'),
+                          ]),
+                      const SizedBox(height: 6),
+                      T('Drag to orbit · Shift-drag to pan · Select a facility to investigate.',
+                          style: ts(10, color: t.muted2)),
+                    ]),
+              ),
+              _LocateField(facilities: list, onPick: (id) => _focus(id)),
+            ]),
+          ),
         Container(
           color: AppTokens.modebar,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-          child: Wrap(spacing: 16, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              const Eyebrow('VIEW MODE'),
-              const SizedBox(width: 10),
-              for (final m in twinModes)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 6),
-                  child: AppChip(label: m, active: mode == m, onTap: () => setState(() => mode = m)),
-                ),
-            ]),
-            Text(
-                '${context.tr('Main Club')} › ${context.tr('Ground Floor')} › ${context.tr('Washroom / Changing Area')}',
-                style: ts(9, color: t.muted2)),
-            if (widget.attentionFilter)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTokens.filterBg,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTokens.filterBorder),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const StatusPill('Readiness filter', tone: Tone.attention),
-                  const SizedBox(width: 10),
-                  T('Showing facilities requiring attention', style: ts(9, color: t.muted)),
-                  const SizedBox(width: 10),
-                  LinkButton('Clear filter ×', size: 9, onTap: widget.onClearFilter),
-                ]),
-              ),
-          ]),
+          padding: EdgeInsets.symmetric(horizontal: hp, vertical: 10),
+          child: Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const Padding(
+                          padding: EdgeInsetsDirectional.only(end: 4),
+                          child: Eyebrow('VIEW MODE')),
+                      for (final m in twinModes)
+                        AppChip(
+                            label: m,
+                            active: mode == m,
+                            onTap: () => setState(() => mode = m)),
+                    ]),
+                Text(
+                    '${context.tr('Main Club')} › ${context.tr('Ground Floor')} › ${context.tr('Washroom / Changing Area')}',
+                    style: ts(mobile ? 12 : 9, color: t.muted2)),
+                if (widget.attentionFilter)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTokens.filterBg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTokens.filterBorder),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const StatusPill('Readiness filter',
+                          tone: Tone.attention),
+                      const SizedBox(width: 10),
+                      T('Showing facilities requiring attention',
+                          style: ts(9, color: t.muted)),
+                      const SizedBox(width: 10),
+                      LinkButton('Clear filter ×',
+                          size: 9, onTap: widget.onClearFilter),
+                    ]),
+                  ),
+              ]),
         ),
         SizedBox(
-          height: 560,
+          height: mobile ? 420 : 560,
           child: Stack(children: [
             Positioned.fill(child: _viewport(context, list)),
             PositionedDirectional(
               top: 16,
-              end: selected != null ? 336 : 16,
+              end: selected != null && !mobile ? 336 : 16,
               child: Column(children: [
-                IconBtn(Icons.add, size: 32, iconSize: 16, onTap: () => setState(() => scale = (scale + 0.15).clamp(1.0, 1.8))),
+                IconBtn(Icons.add,
+                    size: ctl,
+                    iconSize: 16,
+                    onTap: () =>
+                        setState(() => scale = (scale + 0.15).clamp(1.0, 1.8))),
                 const SizedBox(height: 6),
-                IconBtn(Icons.remove, size: 32, iconSize: 16, onTap: () => setState(() => scale = (scale - 0.15).clamp(1.0, 1.8))),
+                IconBtn(Icons.remove,
+                    size: ctl,
+                    iconSize: 16,
+                    onTap: () =>
+                        setState(() => scale = (scale - 0.15).clamp(1.0, 1.8))),
                 const SizedBox(height: 6),
-                IconBtn(Icons.center_focus_strong_outlined, size: 32, iconSize: 16, tooltip: 'Reset view', onTap: _reset),
+                IconBtn(Icons.center_focus_strong_outlined,
+                    size: ctl,
+                    iconSize: 16,
+                    tooltip: 'Reset view',
+                    onTap: _reset),
               ]),
             ),
             PositionedDirectional(
               start: 16,
               top: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xD911120E),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: t.line),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text('N', style: ts(9, color: t.yellow, weight: FontWeight.w700)),
+                  Text('N',
+                      style: ts(9, color: t.yellow, weight: FontWeight.w700)),
                   const SizedBox(width: 4),
-                  Text('${(scale * 100).round()}%', style: ts(9, color: t.muted)),
+                  Text('${(scale * 100).round()}%',
+                      style: ts(9, color: t.muted)),
                   const SizedBox(width: 8),
                   T('Elevated cutaway', style: ts(9, color: t.muted2)),
                 ]),
@@ -210,35 +298,42 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
               start: 16,
               bottom: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xD911120E),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: t.line),
                 ),
+                constraints: BoxConstraints(
+                    maxWidth:
+                        MediaQuery.sizeOf(context).width - (mobile ? 96 : 120)),
                 child: mode == 'Service Status'
-                    ? Row(mainAxisSize: MainAxisSize.min, children: [
+                    ? Wrap(spacing: 8, runSpacing: 6, children: [
                         for (final k in const [
                           ('Ready', Tone.ready),
                           ('Service Required', Tone.attention),
                           ('Cleaning', Tone.cleaning),
                           ('Out of Service', Tone.critical),
                         ])
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(end: 12),
-                            child: StatusPill(k.$1, tone: k.$2),
-                          ),
+                          StatusPill(k.$1, tone: k.$2),
                       ])
-                    : Text('${context.tr(mode)} · $relevant ${context.tr('relevant facilities')}',
+                    : Text(
+                        '${context.tr(mode)} · $relevant ${context.tr('relevant facilities')}',
                         style: ts(9, color: t.muted)),
               ),
             ),
             if (selected != null)
               PositionedDirectional(
-                top: 16,
-                bottom: 16,
-                end: 16,
-                child: Inspector(facility: selected, role: widget.role, onClose: () => widget.onSelect(null)),
+                top: mobile ? 8 : 16,
+                bottom: mobile ? 8 : 16,
+                end: mobile ? 8 : 16,
+                start: mobile ? 8 : null,
+                child: Inspector(
+                    width: mobile ? null : 304,
+                    facility: selected,
+                    role: widget.role,
+                    onClose: () => widget.onSelect(null)),
               ),
           ]),
         ),
@@ -249,7 +344,8 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
   Widget _viewport(BuildContext context, List<Facility> list) {
     return Listener(
       onPointerDown: (e) {
-        panning = HardwareKeyboard.instance.isShiftPressed || e.buttons == kSecondaryMouseButton;
+        panning = HardwareKeyboard.instance.isShiftPressed ||
+            e.buttons == kSecondaryMouseButton;
       },
       onPointerMove: (e) {
         final d = e.delta;
@@ -265,12 +361,14 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
       },
       onPointerSignal: (e) {
         if (e is PointerScrollEvent) {
-          setState(() => scale = (scale + (e.scrollDelta.dy < 0 ? 0.08 : -0.08)).clamp(1.0, 1.8));
+          setState(() => scale =
+              (scale + (e.scrollDelta.dy < 0 ? 0.08 : -0.08)).clamp(1.0, 1.8));
         }
       },
       child: Container(
         decoration: const BoxDecoration(
-          gradient: RadialGradient(colors: [Color(0xFF20221E), Color(0xFF0C0D0B)], radius: 0.9),
+          gradient: RadialGradient(
+              colors: [Color(0xFF20221E), Color(0xFF0C0D0B)], radius: 0.9),
         ),
         child: ClipRect(
           child: Directionality(
@@ -293,7 +391,9 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
                     alignment: Alignment.center,
                     child: Stack(clipBehavior: Clip.none, children: [
                       Positioned.fill(
-                        child: Image.asset('assets/images/optimo-digital-twin-isolated.png', fit: BoxFit.contain),
+                        child: Image.asset(
+                            'assets/images/optimo-digital-twin-isolated.png',
+                            fit: BoxFit.contain),
                       ),
                       for (final f in list)
                         Positioned(
@@ -336,7 +436,10 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
                   color: c.withOpacity(0.35),
                   shape: BoxShape.circle,
                   border: Border.all(color: c, width: 2),
-                  boxShadow: [if (selected || f.priority) BoxShadow(color: c.withOpacity(0.5), blurRadius: 10)],
+                  boxShadow: [
+                    if (selected || f.priority)
+                      BoxShadow(color: c.withOpacity(0.5), blurRadius: 10)
+                  ],
                 ),
               ),
               const SizedBox(width: 4),
@@ -347,7 +450,8 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: selected ? c : t.lineSoft),
                 ),
-                child: Text(f.id, style: ts(8, color: t.ivory, weight: FontWeight.w600)),
+                child: Text(f.id,
+                    style: ts(8, color: t.ivory, weight: FontWeight.w600)),
               ),
             ]),
             if (hovering)
@@ -362,12 +466,16 @@ class _DigitalTwinState extends ConsumerState<DigitalTwin> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: t.line),
                   ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                    Text(f.id, style: ts(10, weight: FontWeight.w600)),
-                    Text(context.tr(f.type), style: ts(9, color: t.muted2)),
-                    const SizedBox(height: 3),
-                    Text(context.tr(mv.$1), style: ts(9, color: toneColor(mv.$2))),
-                  ]),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(f.id, style: ts(10, weight: FontWeight.w600)),
+                        Text(context.tr(f.type), style: ts(9, color: t.muted2)),
+                        const SizedBox(height: 3),
+                        Text(context.tr(mv.$1),
+                            style: ts(9, color: toneColor(mv.$2))),
+                      ]),
                 ),
               ),
           ]),
@@ -415,7 +523,10 @@ class _LocateFieldState extends State<_LocateField> {
     final q = ctrl.text.trim().toUpperCase();
     if (q.isEmpty) return const [];
     return widget.facilities
-        .where((f) => f.id.contains(q) || f.type.toUpperCase().contains(q) || f.zone.toUpperCase().contains(q))
+        .where((f) =>
+            f.id.contains(q) ||
+            f.type.toUpperCase().contains(q) ||
+            f.zone.toUpperCase().contains(q))
         .take(4)
         .toList();
   }
@@ -445,28 +556,42 @@ class _LocateFieldState extends State<_LocateField> {
               child: Material(
                 color: t.surface3,
                 elevation: 10,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: t.line)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(color: t.line)),
                 child: SizedBox(
                   width: 184,
-                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    if (m.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: T('No facility found', style: ts(10, color: t.muted)),
-                      )
-                    else
-                      for (final f in m)
-                        Tap(
-                          onTap: () => _pick(f.id),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(f.id, style: ts(11, weight: FontWeight.w600)),
-                              Text('${context.tr(f.type)} · ${context.tr(f.zone)}', style: ts(9, color: t.muted2)),
-                            ]),
-                          ),
-                        ),
-                  ]),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (m.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: T('No facility found',
+                                style: ts(10, color: t.muted)),
+                          )
+                        else
+                          for (final f in m)
+                            Tap(
+                              onTap: () => _pick(f.id),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(f.id,
+                                          style:
+                                              ts(11, weight: FontWeight.w600)),
+                                      Text(
+                                          '${context.tr(f.type)} · ${context.tr(f.zone)}',
+                                          style: ts(9, color: t.muted2)),
+                                    ]),
+                              ),
+                            ),
+                      ]),
                 ),
               ),
             ),
@@ -483,7 +608,9 @@ class _LocateFieldState extends State<_LocateField> {
             onChanged: (v) {
               final up = v.toUpperCase();
               if (up != v) {
-                ctrl.value = ctrl.value.copyWith(text: up, selection: TextSelection.collapsed(offset: up.length));
+                ctrl.value = ctrl.value.copyWith(
+                    text: up,
+                    selection: TextSelection.collapsed(offset: up.length));
               }
               if (up.trim().isEmpty) {
                 portal.hide();
