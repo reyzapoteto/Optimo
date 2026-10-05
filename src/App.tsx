@@ -2,17 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import exterior from "./assets/optimo-exterior.png"
 import digitalTwin from "./assets/optimo-digital-twin-isolated.png"
+import ExecutiveApp from "./executive/ExecutiveApp"
 
 type Page = "Excellence Center" | "Tasks" | "Schedule" | "Team" | "Quality" | "Issues" | "Reports" | "Settings" | "Role Matrix"
-type Role = "Duty Manager" | "Supervisor"
+type Role = "Duty Manager" | "Supervisor" | "Executive"
 type Ownership = Record<string, { assignee?: string; taskStatus?: string; closed?: boolean; restored?: boolean; reason?: string }>
 
 const accounts: Record<Role, { name: string; initials: string; staffId: string; email: string; shift: string; scope: string }> = {
   "Duty Manager": { name: "Ahmed Hassan", initials: "AH", staffId: "DM-002", email: "ahmed@optimo.sa", shift: "06:00–18:00", scope: "Whole club" },
   Supervisor: { name: "Khalid Al-Mutairi", initials: "KM", staffId: "SUP-014", email: "khalid@optimo.sa", shift: "07:00–15:00", scope: "Changing Rooms & Showers" },
+  Executive: { name: "Fahad Al-Rashid", initials: "FR", staffId: "EX-001", email: "executive@optimo.sa", shift: "—", scope: "Whole club" },
 }
 const roleForStaffId = (id: string): Role | null =>
-  id === "DM-002" ? "Duty Manager" : id === "SUP-014" ? "Supervisor" : null
+  id === "DM-002" ? "Duty Manager" : id === "SUP-014" ? "Supervisor" : id === "EX-001" ? "Executive" : null
 const navForRole = (role: Role, items: Page[]) =>
   role === "Supervisor" ? items.filter((item) => item !== "Settings") : items
 const initialOwnership: Ownership = {
@@ -1025,7 +1027,7 @@ function Login({
           <div className="demo-access" aria-label="Demo access — not part of production">
             <span className="demo-tag">Demo</span>
             <small>Prefill example account</small>
-            {(["Duty Manager", "Supervisor"] as Role[]).map((role) => (
+            {(["Duty Manager", "Supervisor", "Executive"] as Role[]).map((role) => (
               <button
                 key={role}
                 className={email.toUpperCase() === accounts[role].staffId ? "active" : ""}
@@ -1285,9 +1287,6 @@ function Header({
   return (
     <header className="topbar">
       {page !== "Excellence Center" || role === "Supervisor" ? <div className="page-heading" /> : <div className="page-heading">
-        <div className="live-label">
-          <i /> LIVE OPERATIONS <span>· UPDATED NOW</span>
-        </div>
         <h1>
           {page === "Excellence Center"
             ? "Hospitality Excellence Center"
@@ -1318,7 +1317,6 @@ function Header({
             onClick={() => setConnection(connection === "Online" ? "Delayed data" : connection === "Delayed data" ? "Offline" : "Online")}
             aria-label={`Connection: ${connection}. Select to preview other states (demo).`}
           >
-            <Icon name={connection === "Offline" ? "close" : "Quality"} size={12} />
             {connection}
             <bdi>{now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</bdi>
           </button>
@@ -3190,15 +3188,15 @@ function PermissionState({ page, role, goBack }: { page: Page; role: Role; goBac
 
 function RoleMatrixPage({ role }: { role: Role }) {
   const confirm = <em className="to-confirm">To confirm</em>
-  const nav: [string, string, React.ReactNode][] = [
-    ["Excellence Center", "Full", "Full (actions in own zones)"],
-    ["Tasks", "Full", "Dispatch Board (own team / zones)"],
-    ["Schedule", "Full", <>Shift Planner (own zones) {confirm}</>],
-    ["Team", "Full", "Crew Board (own team)"],
-    ["Quality", "Full", "Inspection Mode"],
-    ["Issues", "Full", "Triage Inbox"],
-    ["Reports", "Full", <>Shift Summary, view only {confirm}</>],
-    ["Settings", "Per config", <span className="denied">Hidden (not available)</span>],
+  const nav: [string, React.ReactNode, React.ReactNode, React.ReactNode][] = [
+    ["Excellence Center", "Full", "Full (actions in own zones)", "Full view, read-only"],
+    ["Tasks", "Full", "Dispatch Board (own team / zones)", <>Read-only drill-down ledger {confirm}</>],
+    ["Schedule", "Full", <>Shift Planner (own zones) {confirm}</>, <>Read-only drill-down ledger {confirm}</>],
+    ["Team", "Full", "Crew Board (own team)", <>Read-only drill-down ledger {confirm}</>],
+    ["Quality", "Full", "Inspection Mode", "Quality Overview, read-only"],
+    ["Issues", "Full", "Triage Inbox", "Risk & Issues Register, read-only"],
+    ["Reports", "Full", <>Shift Summary, view only {confirm}</>, "Performance Briefing + export"],
+    ["Settings", "Per config", <span className="denied">Hidden (not available)</span>, <span className="denied">Hidden</span>],
   ]
   const actions: [string, React.ReactNode][] = [
     ["View facility detail", "Yes"],
@@ -3215,15 +3213,15 @@ function RoleMatrixPage({ role }: { role: Role }) {
     ["Act outside own zones", <>View only {confirm}</>],
     ["Command bar (Ctrl / Cmd + K)", <>Search + quick actions {confirm}</>],
   ]
-  const paradigm: [string, string, string][] = [
-    ["Job", "Oversee, analyze, configure", "Run the shift, act now"],
-    ["Mental model", "Management console", "Shift command workbench"],
-    ["Time", "Periods, trends, history", "Now → next 8 hours"],
-    ["Primary object", "Tables, forms, reports", "Boards, lanes, queues"],
-    ["Interaction", "Filter → open → edit", "See → drag / tap → resolve"],
-    ["Density", "High-density, analytical", "Spacious, action-first"],
-    ["Pages feel like", "Data & configuration", "Dispatch & decisions"],
-    ["Settings", "Yes (admin)", "None"],
+  const paradigm: [string, string, string, string][] = [
+    ["Job", "Manage, configure", "Run the shift", "Understand and judge"],
+    ["Mental model", "Management console", "Command workbench", "Executive briefing"],
+    ["Key question", "Is it configured?", "What do I do now?", "Are we meeting standard?"],
+    ["Time", "Periods, history", "Now → next 8h", "Today vs period vs target"],
+    ["Primary object", "Tables, forms", "Boards, lanes", "Scorecards, trends, drill-down"],
+    ["Interaction", "Filter → open → edit", "See → drag → act", "View → compare → drill → export"],
+    ["Density", "High, analytical", "Spacious, action", "Lowest, board-ready"],
+    ["Actions", "Many", "Many (own zones)", "None (read-only)"],
   ]
   return (
     <div className="dashboard role-matrix">
@@ -3239,11 +3237,13 @@ function RoleMatrixPage({ role }: { role: Role }) {
           <span />
           <strong>Duty Manager / Admin</strong>
           <strong className="sup">Supervisor</strong>
-          {paradigm.map(([dimension, dm, sup]) => (
+          <strong>Manager / Executive</strong>
+          {paradigm.map(([dimension, dm, sup, ex]) => (
             <div className="paradigm-row" key={dimension}>
               <span>{dimension}</span>
               <p>{dm}</p>
               <p className="sup">{sup}</p>
+              <p>{ex}</p>
             </div>
           ))}
         </div>
@@ -3263,14 +3263,16 @@ function RoleMatrixPage({ role }: { role: Role }) {
                   <th>MENU</th>
                   <th>DUTY MANAGER</th>
                   <th>SUPERVISOR</th>
+                  <th>MANAGER / EXECUTIVE</th>
                 </tr>
               </thead>
               <tbody>
-                {nav.map(([menu, dm, sup]) => (
+                {nav.map(([menu, dm, sup, ex]) => (
                   <tr key={menu}>
                     <td>{menu}</td>
                     <td>{dm}</td>
                     <td>{sup}</td>
+                    <td>{ex}</td>
                   </tr>
                 ))}
               </tbody>
@@ -4933,7 +4935,7 @@ function QualityPage() {
       </div>
       <section className="quality-grid">
         <article className="data-surface standards">
-          <div className="section-head">
+          <div className="section-head standards-head">
             <div>
               <span className="eyebrow">TODAY'S INSPECTIONS</span>
               <h2>Quality standards</h2>
@@ -5785,6 +5787,17 @@ export default function App() {
         }}
       />
     )
+  if (role === "Executive")
+    return (
+      <ExecutiveApp
+        language={language}
+        setLanguage={setLanguage}
+        logout={() => {
+          setAuthenticated(false)
+          setRole("Duty Manager")
+        }}
+      />
+    )
   return (
     <div
       className="app-shell"
@@ -5833,9 +5846,6 @@ export default function App() {
         {(page !== "Excellence Center" || role === "Supervisor") && !booting && !forbidden && (
           <div className="page-intro page-heading">
             <div className="page-intro-copy">
-              <div className="live-label">
-                <i /> LIVE OPERATIONS <span>· UPDATED NOW</span>
-              </div>
               <h1>{page === "Excellence Center" ? "Hello, Supervisor" : page}</h1>
               <p>{page === "Excellence Center" ? "Live facility operations across your zones." : pageDescriptions[page]}</p>
             </div>
