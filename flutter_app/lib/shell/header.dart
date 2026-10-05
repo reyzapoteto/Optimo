@@ -54,6 +54,7 @@ class _AppHeaderState extends ConsumerState<AppHeader> {
   }
 
   bool get sup => widget.role == Role.supervisor;
+  bool get executive => widget.role == Role.executive;
   bool get home => widget.page == AppPage.excellence;
 
   @override
@@ -76,11 +77,11 @@ class _AppHeaderState extends ConsumerState<AppHeader> {
         : const SizedBox.shrink();
 
     final controls = <Widget>[
-      if (!sup) _contextSummary(context),
+      if (!sup && !executive) _contextSummary(context),
       if (sup) _connection(context, width),
       if (sup && width > 1280) _shiftClock(context),
       if (sup && widget.page != AppPage.roleMatrix && widget.page != AppPage.settings) _scope(context),
-      const LanguageSwitch(),
+      if (!executive) const LanguageSwitch(),
       _bell(context),
       _userButton(context),
     ];
@@ -221,7 +222,7 @@ class _AppHeaderState extends ConsumerState<AppHeader> {
     final count = sup ? 4 : dmNotifications.where((n) => !read.contains(n.$1)).length;
     return Stack(key: _bellKey, clipBehavior: Clip.none, children: [
       IconBtn(Icons.notifications_none, onTap: () {
-        if (sup) {
+        if (sup || executive) {
           openNotificationCenter(context);
         } else {
           showAnchoredPopover(context, anchor: _bellKey, width: 328, builder: (_) => const _DmNotifications());
@@ -249,7 +250,7 @@ class _AppHeaderState extends ConsumerState<AppHeader> {
     return Tap(
       key: _userKey,
       onTap: () => showAnchoredPopover(context, anchor: _userKey, width: 224, builder: (_) => _UserMenu(role: widget.role)),
-      child: sup
+      child: sup || executive
           ? Avatar(acc.initials, size: 40)
           : Container(
               height: 40,
@@ -385,7 +386,9 @@ class _UserMenu extends ConsumerWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               T(acc.name, style: ts(11, weight: FontWeight.w600)),
               const SizedBox(height: 3),
-              Text('${acc.staffId} · ${context.tr(role.label)} · ${context.tr('Shift')} ${acc.shift}',
+              Text(role == Role.executive
+                  ? '${acc.staffId} · ${context.tr(role.label)} · ${context.tr('Read-only access')}'
+                  : '${acc.staffId} · ${context.tr(role.label)} · ${context.tr('Shift')} ${acc.shift}',
                   style: ts(8, color: t.muted2)),
             ]),
           ),

@@ -42,6 +42,7 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
     final t = context.tk;
     final acc = accounts[widget.role]!;
     final lang = ref.watch(langProvider);
+    final executive = widget.role == Role.executive;
     Widget toggle(String title, String body, bool v, ValueChanged<bool> on) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(children: [
@@ -79,7 +80,7 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
           ]),
           const SizedBox(height: 28),
           const FieldLabel('Name'),
-          AppTextField(controller: name, enabled: editing),
+          AppTextField(controller: name, enabled: editing && !executive),
           const SizedBox(height: 16),
           const FieldLabel('Email'),
           AppTextField(controller: email, enabled: false),
@@ -92,10 +93,28 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
             onChanged: (v) => ref.read(langProvider.notifier).state = v == 'English' ? AppLang.en : AppLang.ar,
           ),
           const SizedBox(height: 28),
-          const Eyebrow('NOTIFICATION PREFERENCES'),
+          Eyebrow(executive ? 'EXECUTIVE RESPONSIBILITIES' : 'NOTIFICATION PREFERENCES'),
           const SizedBox(height: 6),
-          toggle('Operational alerts', 'Service, SLA and critical facility updates', alerts, (v) => setState(() => alerts = v)),
-          toggle('Shift updates', 'Assignments and schedule changes', shiftUpdates, (v) => setState(() => shiftUpdates = v)),
+          if (executive) ...[
+            _ExecutiveResponsibility('Monitor club readiness and service performance'),
+            _ExecutiveResponsibility('Review quality trends, issues and SLA compliance'),
+            _ExecutiveResponsibility('Export reports for management briefings'),
+            const SizedBox(height: 18),
+            const Eyebrow('NOTIFICATION PREFERENCES'),
+            const SizedBox(height: 6),
+          ],
+          toggle(
+            executive ? 'Critical operational alerts' : 'Operational alerts',
+            executive ? 'High-severity issues and service risks' : 'Service, SLA and critical facility updates',
+            alerts,
+            (v) => setState(() => alerts = v),
+          ),
+          toggle(
+            executive ? 'Executive briefing' : 'Shift updates',
+            executive ? 'Daily performance and quality summary' : 'Assignments and schedule changes',
+            shiftUpdates,
+            (v) => setState(() => shiftUpdates = v),
+          ),
           if (saved) ...[
             const SizedBox(height: 12),
             Row(children: [
@@ -110,7 +129,7 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(border: Border(top: BorderSide(color: t.line))),
         child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          if (!editing)
+          if (!editing && !executive)
             AppButton(label: 'Edit Profile', kind: BtnKind.primary, onPressed: () => setState(() => editing = true))
           else ...[
             AppButton(
@@ -139,5 +158,23 @@ class _ProfilePanelState extends ConsumerState<ProfilePanel> {
         ]),
       ),
     ]);
+  }
+}
+
+class _ExecutiveResponsibility extends StatelessWidget {
+  const _ExecutiveResponsibility(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tk;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(Icons.check_circle_outline, size: 15, color: t.yellow),
+        const SizedBox(width: 10),
+        Expanded(child: T(label, style: ts(10, color: t.ivory, height: 1.5))),
+      ]),
+    );
   }
 }

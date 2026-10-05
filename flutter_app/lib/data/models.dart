@@ -1,9 +1,18 @@
 import '../theme/tokens.dart';
 
-enum Role { dutyManager, supervisor }
+enum Role { dutyManager, supervisor, executive }
 
 extension RoleX on Role {
-  String get label => this == Role.dutyManager ? 'Duty Manager' : 'Supervisor';
+  String get label {
+    switch (this) {
+      case Role.dutyManager:
+        return 'Duty Manager';
+      case Role.supervisor:
+        return 'Supervisor';
+      case Role.executive:
+        return 'Executive';
+    }
+  }
 }
 
 enum AppPage { excellence, tasks, schedule, team, quality, issues, reports, settings, roleMatrix }

@@ -82,6 +82,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
   }
 
+  void _enterManagerWorkspace() {
+    _prefill(Role.dutyManager);
+    ref.read(actionsProvider).enter(Role.dutyManager);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.tk;
@@ -320,6 +325,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const SizedBox(width: 8),
                 T('Prefill example account', style: ts(10, color: t.muted)),
               ]),
+              const SizedBox(height: 10),
+              AppButton(
+                label: 'Open Manager workspace',
+                kind: BtnKind.primary,
+                icon: Icons.admin_panel_settings_outlined,
+                expand: true,
+                onPressed: _enterManagerWorkspace,
+              ),
               const SizedBox(height: 10),
               Wrap(spacing: 8, children: [
                 for (final r in Role.values)

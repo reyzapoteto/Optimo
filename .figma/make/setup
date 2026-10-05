@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+sdk_root="$HOME/.local/share/flutter-sdk"
+flutter="$sdk_root/flutter/bin/flutter"
+archive="/dev/shm/flutter_linux_3.24.5-stable.tar.xz"
+cached="$HOME/.local/share/mise/downloads/flutter/3.24.5/flutter_linux_3.24.5-stable.tar.xz"
+
+if [ ! -x "$flutter" ]; then
+  rm -rf "$sdk_root"
+  mkdir -p "$sdk_root"
+
+  if [ -f "$cached" ]; then
+    cp "$cached" "$archive"
+    rm -f "$cached"
+  else
+    curl -fL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.5-stable.tar.xz" -o "$archive"
+  fi
+
+  tar -xJf "$archive" -C "$sdk_root"
+  rm -f "$archive"
+fi
+
+"$flutter" config --enable-web

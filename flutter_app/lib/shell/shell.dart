@@ -30,7 +30,9 @@ class AppShell extends ConsumerWidget {
     final role = ref.watch(authProvider);
     if (role == null) return const SizedBox.shrink();
     final booting = ref.watch(bootingProvider);
-    final forbidden = role == Role.supervisor && page == AppPage.settings;
+    final forbidden = (role == Role.supervisor && page == AppPage.settings) ||
+        (role == Role.executive &&
+            {AppPage.tasks, AppPage.schedule, AppPage.team, AppPage.settings}.contains(page));
     final toast = ref.watch(toastProvider);
     final t = context.tk;
 

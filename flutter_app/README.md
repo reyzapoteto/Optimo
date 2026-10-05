@@ -1,6 +1,8 @@
 # OPTIMO Ops (Flutter)
 
-A Flutter port of the React prototype in `../src` (Hospitality Excellence Center).
+The primary OPTIMO Hospitality Excellence Center application for Duty Manager,
+Supervisor, and Executive roles. The legacy React source in `../src` is retained
+only as a migration reference and is not used by the active runtime.
 
 ## Run
 
@@ -18,6 +20,7 @@ flutter run -d chrome
 |---|---|---|
 | Duty Manager | DM-002 | any, 4 or more characters |
 | Supervisor | SUP-014 | any, 4 or more characters |
+| Executive | EX-001 | any, 4 or more characters |
 
 - `SUP-099` (or 4 failed attempts) shows the locked-account state.
 - `OFFLINE` shows the no-connection state. This stands in for `navigator.onLine`.

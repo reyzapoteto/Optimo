@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-pnpm run dev
+cd flutter_app
+exec "$HOME/.local/share/flutter-sdk/flutter/bin/flutter" run -d web-server --web-hostname 0.0.0.0 --web-port "$PORT"

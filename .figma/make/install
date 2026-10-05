@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-pnpm install --prefer-offline --no-frozen-lockfile
+cd flutter_app
+
+if [ ! -d web ]; then
+  "$HOME/.local/share/flutter-sdk/flutter/bin/flutter" create . --platforms=web --project-name=optimo_ops
+fi
+
+exec "$HOME/.local/share/flutter-sdk/flutter/bin/flutter" pub get

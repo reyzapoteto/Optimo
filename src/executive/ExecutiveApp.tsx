@@ -506,6 +506,9 @@ export default function ExecutiveApp({ language, setLanguage, logout }: { langua
   const [tab, setTab] = useState<"All" | "Unread" | "Critical">("All")
   const [sound, setSound] = useState(false)
   const [menu, setMenu] = useState(false)
+  const [profile, setProfile] = useState(false)
+  const [criticalAlerts, setCriticalAlerts] = useState(true)
+  const [executiveBriefing, setExecutiveBriefing] = useState(true)
   const [presenting, setPresenting] = useState(false)
   const [chrome, setChrome] = useState(true)
   const [toasts, setToasts] = useState<Notice[]>([])
@@ -609,8 +612,13 @@ export default function ExecutiveApp({ language, setLanguage, logout }: { langua
               ))}
             </nav>
             <div className="ex-side-foot">
-              <small className="ex-eyebrow">{t("Main Club")}</small>
-              <span><i className={m.offline ? "warn" : "ok"} />{m.online} {t("devices online")}</span>
+              <div className="ex-side-profile">
+                <div className="ex-avatar" aria-hidden="true">FR</div>
+                <div className="ex-user-text">
+                  <b>Fahad Al-Rashid</b>
+                  <small className="ex-role" title="Read-only access">Executive</small>
+                </div>
+              </div>
             </div>
           </aside>
         )}
@@ -622,20 +630,37 @@ export default function ExecutiveApp({ language, setLanguage, logout }: { langua
               {presenting && <span className="ex-head-chip">{location_}</span>}
             </div>
             <div className="ex-header-tools">
-              <span className={`ex-head-chip conn ${conn.toLowerCase()}`}><Svg d={conn === "Online" ? ic.wifi : ic.wifiOff} size={14} />{t(conn)}<bdi className="tnum">{clock(s.now, language)}</bdi></span>
-              <span className="ex-demo" role="status"><i aria-hidden="true" />{t("Demo")}{s.speed > 1 && <em className="tnum">{t("Accelerated time")} ×{s.speed}</em>}</span>
               <IconBtn label={t("Notifications")} d={ic.bell} badge={unread} onClick={() => setNotes(true)} />
-              {!presenting && <button className="ex-btn secondary" onClick={() => setPresenting(true)}><Svg d={ic.present} size={14} />Present</button>}
               {presenting && <IconBtn label={t("Exit full screen")} d={ic.exitFull} onClick={() => setPresenting(false)} />}
               {!presenting && (
                 <div className="ex-select">
                   <button className="ex-user" aria-label="User menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>
                     <span className="ex-avatar">FR</span>
-                    <span className="ex-user-text"><b>Fahad Al-Rashid</b><span className="ex-role" title="Read-only access">Executive</span></span>
                   </button>
                   {menu && (
-                    <div className="ex-pop end" onKeyDown={(e) => e.key === "Escape" && setMenu(false)}>
-                      <p className="ex-pop-label">Read-only access</p>
+                    <div className="ex-pop end ex-account-menu" onKeyDown={(e) => e.key === "Escape" && setMenu(false)}>
+                      <div className="ex-account-summary">
+                        <span className="ex-avatar" aria-hidden="true">FR</span>
+                        <div>
+                          <strong>Fahad Al-Rashid</strong>
+                          <small><bdi>EX-001</bdi> · {t("Executive")}</small>
+                        </div>
+                      </div>
+                      <div className="ex-account-access">
+                        <span><Svg d={ic.lock} size={14} /><strong>{t("Read-only access")}</strong></span>
+                        <small>{t("Enterprise oversight · Main Club")}</small>
+                        <small>{t("Quality, issues, SLA and reports")}</small>
+                      </div>
+                      <button onClick={() => (setProfile(true), setMenu(false))}>
+                        {t("My Profile")}<Svg d={ic.arrow} size={12} />
+                      </button>
+                      <button onClick={() => (setProfile(true), setMenu(false))}>
+                        {t("Preferences")}<Svg d={ic.arrow} size={12} />
+                      </button>
+                      <button onClick={() => (setProfile(true), setMenu(false))}>
+                        {t("Role & permissions")}<Svg d={ic.lock} size={12} />
+                      </button>
+                      <hr />
                       <p className="ex-pop-label">{t("Language")}</p>
                       {(["en", "ar"] as Lang[]).map((l) => (
                         <button key={l} lang={l} className={language === l ? "selected" : ""} onClick={() => (setLanguage(l), setMenu(false))}>
@@ -643,7 +668,7 @@ export default function ExecutiveApp({ language, setLanguage, logout }: { langua
                         </button>
                       ))}
                       <hr />
-                      <button onClick={logout}>{t("Sign out")}</button>
+                      <button className="ex-account-logout" onClick={logout}>{t("Sign out")}</button>
                     </div>
                   )}
                 </div>
@@ -656,12 +681,11 @@ export default function ExecutiveApp({ language, setLanguage, logout }: { langua
               <div className="ex-intro">
                 <div className="ex-intro-copy">
                   <h1>{t(titles[page])}</h1>
-                  <p>{t(blurb[page])}<span className="ex-live"><i />{t(stale ? "STALE · LAST UPDATED 10:24" : "LIVE OPERATIONS · UPDATED NOW")}</span></p>
+                  <p>{t(blurb[page])}</p>
                 </div>
                 {page === "Excellence Center" && <div className="ex-intro-actions">
                   <Select icon={ic.layers} value={location_} options={["Main Club · All floors", "Main Club · L01", "Main Club · L02", "Main Club · Rooftop"]} onChange={setLocation} />
                   <Select value={period} options={["Today", "7 days", "30 days", "Custom"]} onChange={(v) => (v === "Custom" ? setCustomOpen(true) : setPeriod(v as Period))} />
-                  <label className="ex-switch" title="Applies to trends and reports, never to live status"><input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} /><span />Compare</label>
                 </div>}
               </div>
             )}
@@ -702,6 +726,52 @@ export default function ExecutiveApp({ language, setLanguage, logout }: { langua
             <span>Strip · Activity · Bell update live</span>
           </div>
         )}
+
+        <Drawer title="My Profile" code={t("Executive account")} open={profile} close={() => setProfile(false)} width={480}>
+          <div className="ex-profile-identity">
+            <span className="ex-avatar" aria-hidden="true">FR</span>
+            <div>
+              <strong>Fahad Al-Rashid</strong>
+              <small>{t("Executive")} · {t("Enterprise oversight · Main Club")}</small>
+            </div>
+          </div>
+          <dl className="ex-profile-details">
+            <div><dt>{t("Staff ID")}</dt><dd><bdi>EX-001</bdi></dd></div>
+            <div><dt>{t("Email")}</dt><dd>executive@optimo.sa</dd></div>
+            <div><dt>{t("Access level")}</dt><dd>{t("Read-only")}</dd></div>
+            <div><dt>{t("Operational scope")}</dt><dd>{t("Whole club")}</dd></div>
+          </dl>
+          <section className="ex-profile-section">
+            <small className="ex-eyebrow">{t("Executive responsibilities")}</small>
+            <ul>
+              <li>{t("Monitor club readiness and service performance")}</li>
+              <li>{t("Review quality trends, issues and SLA compliance")}</li>
+              <li>{t("Export reports for management briefings")}</li>
+            </ul>
+            <p><Svg d={ic.lock} size={14} />{t("Operational actions remain with Duty Managers and Supervisors.")}</p>
+          </section>
+          <section className="ex-profile-section">
+            <small className="ex-eyebrow">{t("Notification preferences")}</small>
+            <label className="ex-profile-pref">
+              <span><strong>{t("Critical operational alerts")}</strong><small>{t("High-severity issues and service risks")}</small></span>
+              <input type="checkbox" checked={criticalAlerts} onChange={(e) => setCriticalAlerts(e.target.checked)} />
+            </label>
+            <label className="ex-profile-pref">
+              <span><strong>{t("Executive briefing")}</strong><small>{t("Daily performance and quality summary")}</small></span>
+              <input type="checkbox" checked={executiveBriefing} onChange={(e) => setExecutiveBriefing(e.target.checked)} />
+            </label>
+          </section>
+          <section className="ex-profile-section">
+            <small className="ex-eyebrow">{t("Preferred Language")}</small>
+            <div className="ex-profile-language">
+              {(["en", "ar"] as Lang[]).map((l) => (
+                <button key={l} className={language === l ? "active" : ""} onClick={() => setLanguage(l)}>
+                  {l === "en" ? "English" : "العربية"}{language === l && <Svg d={ic.check} size={12} />}
+                </button>
+              ))}
+            </div>
+          </section>
+        </Drawer>
 
         <div className="ex-toasts" aria-live="polite">
           {toasts.map((n) => (

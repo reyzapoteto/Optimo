@@ -18,6 +18,14 @@ const accounts = <Role, Account>{
     shift: '07:00–15:00',
     scope: 'Changing Rooms & Showers',
   ),
+  Role.executive: Account(
+    name: 'Fahad Al-Rashid',
+    initials: 'FR',
+    staffId: 'EX-001',
+    email: 'executive@optimo.sa',
+    shift: '—',
+    scope: 'Whole club',
+  ),
 };
 
 Role? roleForStaffId(String id) {
@@ -26,15 +34,17 @@ Role? roleForStaffId(String id) {
       return Role.dutyManager;
     case 'SUP-014':
       return Role.supervisor;
+    case 'EX-001':
+      return Role.executive;
   }
   return null;
 }
 
 List<AppPage> navFor(Role role) => [
       AppPage.excellence,
-      AppPage.tasks,
-      AppPage.schedule,
-      AppPage.team,
+      if (role != Role.executive) AppPage.tasks,
+      if (role != Role.executive) AppPage.schedule,
+      if (role != Role.executive) AppPage.team,
       AppPage.quality,
       AppPage.issues,
       AppPage.reports,
